@@ -7,8 +7,9 @@ Created on Mon Jan 19 14:28:45 2015
 
 import os
 import numpy as np
+from sklearn.svm import SVC
 from nilearn.input_data import NiftiMasker
-from fetch_data import fetch_adni_fdg_pet, fetch_adni_petmr
+from fetch_data import fetch_adni_petmr
 
 FEAT_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'features')
 CACHE_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'tmp')
@@ -24,14 +25,25 @@ for g in ['AD', 'LMCI', 'EMCI', 'Normal']:
 if os.path.exists(os.path.join(FEAT_DIR, 'features_voxels_norm_petmr.npz')):
     npz = np.load(os.path.join(FEAT_DIR, 'features_voxels_norm_petmr.npz'))
     X = npz['X']
-    idx = npz['idx']
+    idx = npz['idx'].all()
 else:  
     masker = NiftiMasker(mask_strategy='epi',
                          mask_args=dict(opening=1))
     masker.fit(pet_files)
     pet_masked = masker.transform_imgs(pet_files, n_jobs=4)
     X = np.vstack(pet_masked)
-    np.savez(os.path.join(FEAT_DIR, 'features_voxels_norm_petmr'), X=X, idx=idx)
+    np.savez(os.path.join(FEAT_DIR, 'features_voxels_norm_petmr'), X=X, idx=idx, masker=masker)
     
 ###
+
+g1_feat = X[idx['AD'][0]]
+g2_feat = X[idx['Normal'][0]]
+x = np.concatenate((g1_feat, g2_feat), axis=0)
+y = np.ones(len(x))
+y[len(x) - len(g2_feat):] = 0
+
+svm = SVC(kernel='linear')
+svm.fit(x,y)
+coef_map = masker.inverse_transform(svm.coef_)
+coef_map.to_filename(os.path.join(FEAT_DIR, 'petmr_coef_map.nii.gz'))
 

@@ -68,7 +68,7 @@ for subject_n in range(n_subjects):
 
 from sklearn.svm import SVC
 from sklearn.cross_validation import StratifiedShuffleSplit
-    
+
 corr_mat = np.array(corr_mat)
 corr_feat = np.array(corr_feat)
 
@@ -96,5 +96,6 @@ for gr in groups:
         score[counter, pg_counter] = estim.score(Xtest, Ytest)
         counter += 1
     pg_counter += 1
+    break
     
 plot_shufflesplit(score, groups)
