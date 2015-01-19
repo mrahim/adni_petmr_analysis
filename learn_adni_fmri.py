@@ -10,6 +10,7 @@ Created on Mon Jan 19 14:17:03 2015
 
 import os
 import numpy as np
+import nibabel as nib
 from fetch_data import fetch_adni_petmr
 from nilearn.datasets import fetch_msdl_atlas
 from nilearn.input_data import NiftiMapsMasker
@@ -17,31 +18,11 @@ import matplotlib.pyplot as plt
 
 
 FIG_PATH = '/disk4t/mehdi/data/tmp/figures'
-
-def plot_shufflesplit(score, pairwise_groups):
-    bp = plt.boxplot(score, 0, '', 0)
-    for key in bp.keys():
-        for box in bp[key]:
-            box.set(linewidth=2)
-    plt.grid(axis='x')
-    plt.xlim([.4, 1.])
-    plt.xlabel('Accuracy (%)', fontsize=18)
-    plt.title('Shuffle Split Accuracies ',
-              fontsize=17)
-    plt.yticks(range(1,7), ['AD/Normal', 'AD/EMCI', 'AD/LMCI', 'LMCI/Normal', 'LMCI/EMCI', 'EMCI/Normal'], fontsize=18)
-    plt.xticks(np.linspace(0.4,1.0,7), np.arange(40,110,10), fontsize=18)
-    plt.tight_layout()
-    for ext in ['png', 'pdf', 'svg']:
-        fname = '.'.join(['boxplot_adni_baseline_rs_fmri_corr_121',
-                          ext])
-        plt.savefig(os.path.join(FIG_PATH, fname), transparent=True)
-
-
-CACHE_DIR = os.path.join('/', 'disk4t', 'mehdi',
-                         'data', 'tmp')
+FEAT_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'features')
+CACHE_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'tmp')
                          
 dataset = fetch_adni_petmr()
-atlas = fetch_msdl_atlas()
+
 func_files = dataset['func']
 dx_group = np.array(dataset['dx_group'])
 idx = {}
@@ -52,50 +33,11 @@ n_subjects = len(func_files)
 subjects = []
 corr_feat = []
 corr_mat = []
-for subject_n in range(n_subjects):
-    filename = func_files[subject_n]
-    print("Processing file %s" % filename)
-    print("-- Computing region signals ...")
-    masker = NiftiMapsMasker(atlas["maps"],
-                             resampling_target="maps", standardize=False,
-                             memory=CACHE_DIR, memory_level=1, verbose=0)
-    region_ts = masker.fit_transform(filename)
-    subjects.append(region_ts)
-    print("-- Computing correlations")
-    corr_matrix = np.corrcoef(region_ts.T)
-    corr_feat.append(corr_matrix[np.tril_indices(len(corr_matrix))])
-    corr_mat.append(corr_matrix)
+PCC_COORDS = [26, 22, 28] #[0, -44, 34]
 
-from sklearn.svm import SVC
-from sklearn.cross_validation import StratifiedShuffleSplit
 
-corr_mat = np.array(corr_mat)
-corr_feat = np.array(corr_feat)
-
-nb_iter = 100
-pg_counter = 0
-
-groups = [['AD', 'Normal'], ['AD', 'EMCI'], ['AD', 'LMCI'],
-          ['LMCI', 'Normal'], ['EMCI', 'LMCI'], ['EMCI', 'Normal']]
-score = np.zeros((nb_iter, len(groups)))
-for gr in groups:
-    g1_feat = corr_feat[idx[gr[0]][0]]
-    g2_feat = corr_feat[idx[gr[1]][0]]
-    x = np.concatenate((g1_feat, g2_feat), axis=0)
-    y = np.ones(len(x))
-    y[len(x) - len(g2_feat):] = 0
-    
-    estim = SVC(kernel='linear')
-    sss = StratifiedShuffleSplit(y, n_iter=nb_iter, test_size=0.2)
-    # 1000 runs with randoms 80% / 20% : StratifiedShuffleSplit
-    counter = 0
-    for train, test in sss:
-        Xtrain, Xtest = x[train], x[test]
-        Ytrain, Ytest = y[train], y[test]
-        Yscore = estim.fit(Xtrain,Ytrain)
-        score[counter, pg_counter] = estim.score(Xtest, Ytest)
-        counter += 1
-    pg_counter += 1
+for f in func_files:
+    img = nib.load(f)
+    pcc_values = img.get_data()[26, 22, 28, ...]
+    np.correlate(pcc_values, )
     break
-    
-plot_shufflesplit(score, groups)
