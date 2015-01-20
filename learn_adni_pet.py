@@ -49,6 +49,6 @@ y[len(x) - len(g2_feat):] = 0
 svm = SVC(kernel='linear')
 svm.fit(x,y)
 coef_map = masker.inverse_transform(svm.coef_)
-coef_map.to_filename(os.path.join(FEAT_DIR, 'coef_map_pet.nii.gz'))
+#coef_map.to_filename(os.path.join(FEAT_DIR, 'coef_map_pet.nii.gz'))
 
 
