@@ -23,14 +23,17 @@ idx = {}
 for g in ['AD', 'LMCI', 'EMCI', 'Normal']:
     idx[g] = np.where(dx_group == g)
 
+
+
+masker = NiftiMasker(mask_strategy='epi',
+                     mask_args=dict(opening=1))
+masker.fit(pet_files)
+    
 if os.path.exists(os.path.join(FEAT_DIR, 'features_voxels_norm_pet.npz')):
     npz = np.load(os.path.join(FEAT_DIR, 'features_voxels_norm_pet.npz'))
     X = npz['X']
     idx = npz['idx'].all()
-else:  
-    masker = NiftiMasker(mask_strategy='epi',
-                         mask_args=dict(opening=1))
-    masker.fit(pet_files)
+else:
     pet_masked = masker.transform_imgs(pet_files, n_jobs=4)
     X = np.vstack(pet_masked)
     np.savez(os.path.join(FEAT_DIR, 'features_voxels_norm_pet'), X=X, idx=idx, masker=masker)
@@ -47,4 +50,5 @@ svm = SVC(kernel='linear')
 svm.fit(x,y)
 coef_map = masker.inverse_transform(svm.coef_)
 coef_map.to_filename(os.path.join(FEAT_DIR, 'coef_map_pet.nii.gz'))
+
 
