@@ -49,12 +49,31 @@ y[len(x) - len(g2_feat):] = 0
 
 
 ### compute and save a linear SVC model
-svm = SVC(kernel='linear')
-svm.fit(x,y)
+coeffs = []
+scores = []
+from sklearn.cross_validation import StratifiedShuffleSplit
+sss = StratifiedShuffleSplit(y, n_iter=100, test_size=.2)
+
+cpt = 0
+for train, test in sss:
+    x_train = x[train]
+    y_train = y[train]
+    x_test = x[test]
+    y_test = y[test]
+    
+    svm = SVC(kernel='linear')
+    svm.fit(x_train, y_train)
+    scores.append(svm.score(x_test, y_test))
+    coeffs.append(svm.coef_)
+    cpt += 1
+    print cpt
+
+c = np.mean(np.vstack(np.array(coeffs)), axis=0)
+np.savez(os.path.join(FEAT_DIR, 'coef_mean_map_pet'),
+         coef_map=c, idx=idx, masker=masker)
+"""
 coef_map = masker.inverse_transform(svm.coef_)
 coef_map.to_filename(os.path.join(FEAT_DIR, 'coef_map_pet.nii.gz'))
 np.savez(os.path.join(FEAT_DIR, 'coef_map_pet'),
          coef_map=svm.coef_, idx=idx, masker=masker)
-
-
-
+"""
