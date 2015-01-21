@@ -54,7 +54,7 @@ svm.fit(x,y)
 coef_map = masker.inverse_transform(svm.coef_)
 coef_map.to_filename(os.path.join(FEAT_DIR, 'coef_map_pet.nii.gz'))
 np.savez(os.path.join(FEAT_DIR, 'coef_map_pet'),
-         coef_map=coef_map, idx=idx, masker=masker)
+         coef_map=svm.coef_, idx=idx, masker=masker)
 
 
 
