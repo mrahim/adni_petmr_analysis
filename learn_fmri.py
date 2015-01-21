@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-
-Learn ADNI fMRI
+Learn ADNI fMRI (deprecated)
 
 Created on Mon Jan 19 14:17:03 2015
 
-@author: mr243268
+@author: mehdi.rahim@cea.fr
 """
 
 import os
