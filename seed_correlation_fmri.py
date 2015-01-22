@@ -43,22 +43,7 @@ idx = {}
 for g in ['AD', 'LMCI', 'EMCI', 'Normal']:
     idx[g] = np.where(dx_group == g)
 
+### 
 
-### compute and save correlations on masked fMRI with pet mask
-mmasker = NiftiMasker(mask_img=os.path.join(FEAT_DIR, 'pet_mask.nii.gz'))
-correlations = []
-for i in np.arange(len(func_files)):
-    print i
-    data = mmasker.fit_transform(func_files[i])
-    img = nib.load(func_files[i])
-    pcc_values = img.get_data()[26, 22, 28, ...]
-    pcc_vec = np.tile(pcc_values, (data.shape[1],1)).T
-    correlations.append(fast_corr(data, pcc_vec))
-    break
-    """
-    corr = []
-    for j in np.arange(data.shape[1]):
-        corr.append(np.corrcoef(data[:,j], pcc_values)[0,1])
-    correlations.append(corr)
-    break
-    """
+
+img = nib.load(func_files[0])
