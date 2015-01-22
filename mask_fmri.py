@@ -39,19 +39,3 @@ for f in func_files:
     data.append(apply_mask(img, mask_img))
     cpt += 1
     print cpt
-
-"""
-### compute and save correlations on masked fMRI with pet mask
-mmasker = NiftiMasker(mask_img=os.path.join(FEAT_DIR, 'pet_mask.nii.gz'))
-correlations = []
-for i in np.arange(len(func_files)):
-    print i
-    data = mmasker.fit_transform(func_files[i])
-    img = nib.load(func_files[i])
-    pcc_values = img.get_data()[26, 22, 28, ...]
-    
-
-    np.savez(os.path.join(FEAT_DIR, 'fmri_masked'),
-             fmri_masked=fmri_masked, idx=idx)
-             
-             """
