@@ -73,13 +73,15 @@ idx = {}
 for g in ['AD', 'LMCI', 'EMCI', 'Normal']:
     idx[g] = np.where(dx_group == g)
 
-pcc_mni_coords = [0, -44, 34]
+#pcc_mni_coords = [0, -44, 34] #PCC
+pcc_mni_coords = [0, -8, 56] #Motor
 
-img = nib.load(func_files[0])
-affine = img.get_affine()
-mni_coords_list = get_sphere_coords(pcc_mni_coords, 3.5)
-pcc_indices = mni_to_indices(mni_coords_list, affine)
 
-seed_values = img.get_data()[tuple((pcc_indices[:,0].T,pcc_indices[:,1].T,pcc_indices[:,2].T))]
-
-d = np.load(os.path.join(FMRI_PATH, subject_list[0]+'.npy'))
+for i in np.arange(len(func_files)):
+    img = nib.load(func_files[i])
+    affine = img.get_affine()
+    mni_coords_list = get_sphere_coords(pcc_mni_coords, 3.5)
+    pcc_indices = mni_to_indices(mni_coords_list, affine)    
+    seed_values = img.get_data()[tuple((pcc_indices[:,0].T,pcc_indices[:,1].T,pcc_indices[:,2].T))]
+    np.save(os.path.join(FMRI_PATH, 'motor_seed_subjects', subject_list[i]), seed_values)
+    print i

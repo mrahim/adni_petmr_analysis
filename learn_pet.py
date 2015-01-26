@@ -42,6 +42,7 @@ else:
     
 ### prepare data for classification
 g1_feat = X[idx['AD'][0]]
+#idx_ = np.hstack(idx['Normal'][0], idx['EMCI'][0])
 g2_feat = X[idx['Normal'][0]]
 x = np.concatenate((g1_feat, g2_feat), axis=0)
 y = np.ones(len(x))
@@ -69,9 +70,10 @@ for train, test in sss:
     print cpt
 
 c = np.mean(np.vstack(np.array(coeffs)), axis=0)
+
+"""
 np.savez(os.path.join(FEAT_DIR, 'coef_mean_map_pet'),
          coef_map=c, idx=idx, masker=masker)
-"""
 coef_map = masker.inverse_transform(svm.coef_)
 coef_map.to_filename(os.path.join(FEAT_DIR, 'coef_map_pet.nii.gz'))
 np.savez(os.path.join(FEAT_DIR, 'coef_map_pet'),

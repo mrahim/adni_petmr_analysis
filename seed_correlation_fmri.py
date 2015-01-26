@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-funcitions for the:
+functions for the:
 - Extraction of seed of interest
 - Computation of the correlations
 
@@ -32,18 +32,23 @@ def fast_corr(a, b):
 
 ### set paths
 FIG_PATH = '/disk4t/mehdi/data/tmp/figures'
-FEAT_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'features')
+FMRI_PATH = os.path.join('/', 'disk4t', 'mehdi', 'data', 'features', 'fmri_subjects')
 CACHE_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'tmp')
 
-### fetch fmri
+### load fmri and seed
 dataset = fetch_adni_petmr()
-func_files = dataset['func']
-dx_group = np.array(dataset['dx_group'])
-idx = {}
-for g in ['AD', 'LMCI', 'EMCI', 'Normal']:
-    idx[g] = np.where(dx_group == g)
+subject_list = dataset['subjects']
 
-### 
-
-
-img = nib.load(func_files[0])
+cpt = 0
+for subj in subject_list:
+    fmri = np.load(os.path.join(FMRI_PATH, subj+'.npy'))
+    seed = np.load(os.path.join(FMRI_PATH, 'motor_seed_subjects', subj+'.npy'))
+    
+    corr = []
+    for i in np.arange(len(seed)):
+        c = fast_corr(fmri, np.tile(seed[i], [fmri.shape[1], 1]).T)
+        corr.append(c)
+    s_corr = np.mean(corr, axis= 0)
+    np.save(os.path.join(FMRI_PATH, 'motor_corr_subjects', subj), s_corr)
+    cpt += 1
+    print cpt
