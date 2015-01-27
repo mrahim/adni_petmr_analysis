@@ -19,6 +19,7 @@ Created on Wed Jan 21 09:05:28 2015
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
 from sklearn.linear_model import RidgeCV, LogisticRegression
 from sklearn.cross_validation import StratifiedShuffleSplit
 
@@ -92,16 +93,44 @@ for train, test in ss:
     print cpt, s1, s2
     
 
+plot_diffs = True
+rdg_scores = np.array(rdg_scores)
+fmri_scores = np.array(fmri_scores)
+neg_idx = np.where(rdg_scores - fmri_scores < 0)
+
 bp = plt.boxplot([fmri_scores, rdg_scores])
 for key in bp.keys():
     for box in bp[key]:
         box.set(linewidth=2)
 plt.grid(axis='y')
-plt.xticks(range(1,3), ['fMRI', 'fMRI+PET model'], fontsize=17)
+plt.xticks([1, 2] , ['fMRI', 'fMRI+PET model'], fontsize=17)
 plt.ylabel('Accuracy (%)', fontsize=17)
 plt.ylim([0.2, 1.0])
 plt.yticks(np.linspace(.2, 1.0, 9), np.arange(20,110,10), fontsize=17)
 plt.title('AD/Normal classification accuracies', fontsize=18)
+if plot_diffs:
+    plt.plot([1,2],[fmri_scores, rdg_scores],'--c')
+    plt.plot([1,2],[fmri_scores[neg_idx], rdg_scores[neg_idx]],'--r')
 plt.tight_layout()
+
+blue_line = mlines.Line2D([], [], linewidth=2, color='c', label='+')
+red_line = mlines.Line2D([], [], linewidth=2, color='r', label='-')
+plt.legend(handles=[blue_line, red_line])
 plt.savefig(os.path.join(FIG_DIR, 'output1.png'))
 plt.savefig(os.path.join(FIG_DIR, 'output1.pdf'))
+
+from scipy.stats import wilcoxon
+_, pval = wilcoxon(rdg_scores, fmri_scores)
+plt.figure()
+bp = plt.boxplot(rdg_scores-fmri_scores)
+for key in bp.keys():
+    for box in bp[key]:
+        box.set(linewidth=2)
+plt.xticks([] , [])
+plt.ylabel('Difference', fontsize=17)
+plt.yticks(np.linspace(-.5, .5, 11), np.linspace(-.5, .5, 11), fontsize=17)
+plt.grid(axis='y')
+plt.tight_layout()
+plt.title('Wilcoxon pval = '+str('%.2f' % -np.log10(pval)), fontsize=18)
+plt.savefig(os.path.join(FIG_DIR, 'output1-diff.png'))
+plt.savefig(os.path.join(FIG_DIR, 'output1-diff.pdf'))
