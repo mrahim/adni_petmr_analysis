@@ -11,6 +11,8 @@ import os
 import numpy as np
 import nibabel as nib
 from fetch_data import fetch_adni_petmr
+from joblib import delayed, Parallel
+
 
 def get_sphere_coords(center, radius):
     coords_list = [np.array(center)]
@@ -58,11 +60,49 @@ def fast_corr(a, b):
     return cov / var
 
 
+
+
+def extract_seed_subjects(func_files, subject_list, mni_coords, output_folder):
+    if not os.path.isdir(os.path.join(FMRI_PATH, output_folder)):
+        os.mkdir(os.path.join(FMRI_PATH, output_folder))
+    affine = nib.load(func_files[0]).get_affine()
+    mni_coords_list = get_sphere_coords(mni_coords, 5)
+    seed_indices = mni_to_indices(mni_coords_list, affine)
+    n_func_files = len(func_files)
+    
+    Parallel(n_jobs=10)(delayed(extract_seed_subject)(func_files[i], 
+                                                      seed_indices,
+                                                      output_folder,
+                                                      subject_list[i]) for i in np.arange(n_func_files))
+    """
+    for i in np.arange(n_func_files):
+        extract_seed_subject(func_files[i], seed_indices, output_folder, subject_list[i])
+    """
+    """
+    img = nib.load(func_files[i])
+    seed_values = img.get_data()[tuple((seed_indices[:,0].T,
+                                        seed_indices[:,1].T,
+                                        seed_indices[:,2].T))]
+    np.save(os.path.join(FMRI_PATH, output_folder, subject_list[i]),
+            seed_values)
+    """
+
+
+def extract_seed_subject(func_file, seed_indices, output_folder, subject_id):
+    img = nib.load(func_file)
+    seed_values = img.get_data()[tuple((seed_indices[:,0].T,
+                                        seed_indices[:,1].T,
+                                        seed_indices[:,2].T))]
+    np.save(os.path.join(FMRI_PATH, output_folder, subject_id),
+            seed_values)
+
+
 ### set paths
 FIG_PATH = '/disk4t/mehdi/data/tmp/figures'
-FEAT_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'features')
+FEAT_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'features', 'smooth_preproc')
 CACHE_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'tmp')
-FMRI_PATH = os.path.join('/', 'disk4t', 'mehdi', 'data', 'features', 'fmri_subjects')
+FMRI_PATH = os.path.join('/', 'disk4t', 'mehdi', 'data', 'features',
+                         'smooth_preproc', 'fmri_subjects')
 
 ### fetch fmri
 dataset = fetch_adni_petmr()
@@ -73,15 +113,5 @@ idx = {}
 for g in ['AD', 'LMCI', 'EMCI', 'Normal']:
     idx[g] = np.where(dx_group == g)
 
-#pcc_mni_coords = [0, -44, 34] #PCC
-pcc_mni_coords = [0, -8, 56] #Motor
-
-
-for i in np.arange(len(func_files)):
-    img = nib.load(func_files[i])
-    affine = img.get_affine()
-    mni_coords_list = get_sphere_coords(pcc_mni_coords, 3.5)
-    pcc_indices = mni_to_indices(mni_coords_list, affine)    
-    seed_values = img.get_data()[tuple((pcc_indices[:,0].T,pcc_indices[:,1].T,pcc_indices[:,2].T))]
-    np.save(os.path.join(FMRI_PATH, 'motor_seed_subjects', subject_list[i]), seed_values)
-    print i
+seed_mni_coords = [0, -44, -34] #Visual
+extract_seed_subjects(func_files, subject_list, seed_mni_coords, 'visual_seed_subjects')

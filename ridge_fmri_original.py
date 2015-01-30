@@ -41,10 +41,7 @@ idx = npz['idx'].any()
 
 ### prepare data
 g1_feat = X[idx['AD'][0]]
-idx_ = idx['Normal'][0]
-#idx_ = np.hstack((idx['Normal'][0], idx['EMCI'][0]))
-g2_feat = X[idx_]
-#g2_feat = X[idx['Normal'][0]]
+g2_feat = X[idx['Normal'][0]]
 x = np.concatenate((g1_feat, g2_feat), axis=0)
 y = np.ones(len(x))
 y[len(x) - len(g2_feat):] = 0
@@ -134,6 +131,6 @@ plt.ylabel('Difference', fontsize=17)
 plt.yticks(np.linspace(-.5, .5, 11), np.linspace(-.5, .5, 11), fontsize=17)
 plt.grid(axis='y')
 plt.tight_layout()
-plt.title('Wilcoxon pval = '+str('10^-%.2f' % -np.log10(pval)), fontsize=17)
+plt.title('Wilcoxon pval = '+str('%.2f' % -np.log10(pval)), fontsize=18)
 plt.savefig(os.path.join(FIG_DIR, 'output1-diff.png'))
 plt.savefig(os.path.join(FIG_DIR, 'output1-diff.pdf'))
