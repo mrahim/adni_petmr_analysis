@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """
-Script that computes svm coeffs on PET voxels
 Created on Mon Jan 26 11:16:46 2015
 
 @author: mehdi.rahim@cea.fr
@@ -12,7 +11,7 @@ import nibabel as nib
 from sklearn.svm import SVC
 from sklearn.cross_validation import StratifiedShuffleSplit
 from fetch_data import fetch_adni_petmr, fetch_adni_fdg_pet,\
-                       fetch_adni_fdg_pet_diff, fetch_adni_masks
+                       fetch_adni_fdg_pet_diff
 import matplotlib.pyplot as plt
 
 FIG_PATH = '/disk4t/mehdi/data/tmp/figures'
@@ -39,26 +38,50 @@ def plot_shufflesplit(score, groups, title):
                           ext])
         plt.savefig(os.path.join(FIG_PATH, fname), transparent=False)
 
-from nilearn.masking import apply_mask
 
-###
-def learn_pet_coeffs(img_files, indices, mask):
-    """Returns SVM coeffs learned on PET dataset
-    """
-    
-    X = apply_mask(img_files, mask)
-    
-    ### AD / NC classification
+FEAT_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'features')
+CACHE_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'tmp')
+feat_path = os.path.join(FEAT_DIR, 'features_voxels_norm_petmr_masked.npz')
+
+
+dataset = fetch_adni_petmr()
+petmr = dataset['pet']
+dx_group = np.array(dataset['dx_group'])
+
+idx = {}
+for g in ['AD', 'LMCI', 'EMCI', 'Normal']:
+    idx[g] = np.where(dx_group == g)
+masker = NiftiMasker()
+masker.mask_img_ = nib.load(os.path.join(FEAT_DIR, 'pet_mask.nii.gz'))
+#masker.fit(petmr)
+
+### load or compute features
+if os.path.exists(feat_path):
+    npz = np.load(feat_path)
+    X = npz['X']
+    idx = npz['idx'].all()
+else:
+    pet_masked = masker.transform_imgs(petmr, n_jobs=10)
+    X = np.vstack(pet_masked)
+    np.savez(feat_path, X=X, idx=idx, masker=masker)
+
+### Classification
+groups = [['Normal'], ['EMCI'], ['LMCI'], ['EMCI', 'Normal'], ['LMCI', 'EMCI', 'Normal']]
+scores = []
+for gr in groups:
     g1_feat = X[idx['AD'][0]]
-    g2_feat = X[idx['Normal'][0]]
-    
+    idx_ = idx[gr[0]][0]
+    for k in np.arange(1, len(gr)):
+        idx_ = np.hstack((idx_, idx[gr[k]][0]))
+    g2_feat = X[idx_]
     x = np.concatenate((g1_feat, g2_feat), axis=0)
     y = np.ones(len(x))
     y[len(x) - len(g2_feat):] = 0
+
     sss = StratifiedShuffleSplit(y, n_iter=100, test_size=.2)
+    
     cpt = 0
     score = []
-    coeff = []
     for train, test in sss:
         x_train = x[train]
         y_train = y[train]
@@ -67,35 +90,7 @@ def learn_pet_coeffs(img_files, indices, mask):
         
         svm = SVC(kernel='linear')
         svm.fit(x_train, y_train)
-        coeff.append(svm.coef_)
         score.append(svm.score(x_test, y_test))
         cpt += 1
-        print cpt,'/100'
-    
-    return np.mean(coeff, axis=0), np.array(score)
-    
-
-
-FEAT_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data',
-                        'features', 'pet_models')
-CACHE_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'tmp')
-
-### Load pet data and mask
-mask = fetch_adni_masks()
-
-datasets = {}
-datasets['petmr'] = fetch_adni_petmr()
-datasets['pet_diff']  = fetch_adni_fdg_pet_diff()
-datasets['pet'] = fetch_adni_fdg_pet()
-
-for key in datasets.keys():
-    print key
-    dataset = datasets[key]
-    dx_group = np.array(dataset['dx_group'])
-    idx = {}
-    for g in ['AD', 'LMCI', 'EMCI', 'Normal']:
-        idx[g] = np.where(dx_group == g)
-    coeffs, _ = learn_pet_coeffs(dataset['pet'], idx, mask['mask_petmr'])
-    np.savez_compressed(os.path.join(FEAT_DIR, 'svm_coeffs_' + key),
-                        svm_coeffs=coeffs, subjects=dataset['subjects'],
-                        idx=idx)
+        print cpt
+    scores.append(score)

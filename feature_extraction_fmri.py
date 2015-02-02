@@ -70,22 +70,10 @@ def extract_seed_subjects(func_files, subject_list, mni_coords, output_folder):
     seed_indices = mni_to_indices(mni_coords_list, affine)
     n_func_files = len(func_files)
     
-    Parallel(n_jobs=10)(delayed(extract_seed_subject)(func_files[i], 
-                                                      seed_indices,
-                                                      output_folder,
-                                                      subject_list[i]) for i in np.arange(n_func_files))
-    """
-    for i in np.arange(n_func_files):
-        extract_seed_subject(func_files[i], seed_indices, output_folder, subject_list[i])
-    """
-    """
-    img = nib.load(func_files[i])
-    seed_values = img.get_data()[tuple((seed_indices[:,0].T,
-                                        seed_indices[:,1].T,
-                                        seed_indices[:,2].T))]
-    np.save(os.path.join(FMRI_PATH, output_folder, subject_list[i]),
-            seed_values)
-    """
+    Parallel(n_jobs=10, verbose=2)(\
+    delayed(extract_seed_subject)(func_files[i], seed_indices,
+                                  output_folder, subject_list[i])\
+                                  for i in np.arange(n_func_files))
 
 
 def extract_seed_subject(func_file, seed_indices, output_folder, subject_id):
@@ -99,7 +87,8 @@ def extract_seed_subject(func_file, seed_indices, output_folder, subject_id):
 
 ### set paths
 FIG_PATH = '/disk4t/mehdi/data/tmp/figures'
-FEAT_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'features', 'smooth_preproc')
+FEAT_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'features',
+                        'smooth_preproc')
 CACHE_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'tmp')
 FMRI_PATH = os.path.join('/', 'disk4t', 'mehdi', 'data', 'features',
                          'smooth_preproc', 'fmri_subjects')
