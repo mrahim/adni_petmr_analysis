@@ -46,9 +46,10 @@ def mni_to_indices(mni_coords_list, affine):
 
 def create_seeds_image(seeds_mni_coords, ref_img):
     img_affine = nib.load(ref_img).get_affine()
-    img_shape = nib.load(ref_img).get_shape()[:-1]
+    img_shape = nib.load(ref_img).get_shape()
     seeds_img = None
     seeds_data = np.zeros(img_shape)
+    print img_shape
     
     for i in range(len(seeds_mni_coords)):
         mni_coords_list = get_sphere_coords(seeds_mni_coords[i], 6)
@@ -79,13 +80,13 @@ func_files = dataset['func']
 
 seeds_mni_coords=[[0, -52, 30], #PCC
                   [0, -90, 4], #Visual
-                  [-34, -24, 60], #Motor
+                  [-34, -24, 60], #Motor-L
                   [0, 26, 28], #ACC
                   [-38, -46, 42], #LPC
                   [44, -46, 48], #RPC
                   [0, 54, 18]] #Medial prefrontal
 
-seeds_img = create_seeds_image(seeds_mni_coords, func_files[0])
+seeds_img = create_seeds_image(seeds_mni_coords, mask['mask_pet'])
 
 seeds_img.to_filename(os.path.join(FEAT_DIR, 'masks', 'seeds_fmri.nii.gz'))
 

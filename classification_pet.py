@@ -75,7 +75,6 @@ def learn_pet_coeffs(img_files, indices, mask):
     return np.mean(coeff, axis=0), np.array(score)
     
 
-
 FEAT_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data',
                         'features', 'pet_models')
 CACHE_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'tmp')

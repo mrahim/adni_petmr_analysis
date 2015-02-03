@@ -22,34 +22,51 @@ import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 from sklearn.linear_model import RidgeCV, LogisticRegression
 from sklearn.cross_validation import StratifiedShuffleSplit
+from fetch_data import fetch_adni_petmr
 
 ### set paths
 FIG_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'tmp', 'figures', 'petmr')
 FEAT_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'features')
 CACHE_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'tmp')
+CORR_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'features',
+                        'smooth_preproc', 'fmri_subjects')
+
 corr_path = os.path.join(FEAT_DIR, 'features_fmri_masked.npz')
-pet_model_path = os.path.join(FEAT_DIR, 'coef_map_pet.npz')
+pet_model_path = os.path.join(FEAT_DIR, 'pet_models', 'svm_coeffs_pet.npz')
+
+
+### load petmr dataset
+dataset = fetch_adni_petmr()
+fmri = dataset['func']
+subj_list = dataset['subjects']
+dx_group = np.array(dataset['dx_group'])
+idx = {}
+for g in ['AD', 'LMCI', 'EMCI', 'Normal']:
+    idx[g] = np.where(dx_group == g)
+
 
 ### load pet model
-npz = np.load(pet_model_path)
-model = npz['coef_map']
+model = np.load(pet_model_path)['svm_coeffs']
 
-### load fmri features
-npz = np.load(corr_path)
-X = npz['correlations']
-idx = npz['idx'].any()
+
+### load fMRI features
+X = []
+for i in np.arange(len(fmri)):
+    X.append(np.load(os.path.join(CORR_DIR, subj_list[i]+'.npz'))['corr'])
+X = np.array(X)
+
 
 ### prepare data
 g1_feat = X[idx['AD'][0]]
 idx_ = idx['Normal'][0]
 #idx_ = np.hstack((idx['Normal'][0], idx['EMCI'][0]))
 g2_feat = X[idx_]
-#g2_feat = X[idx['Normal'][0]]
 x = np.concatenate((g1_feat, g2_feat), axis=0)
 y = np.ones(len(x))
 y[len(x) - len(g2_feat):] = 0
 
 ### Ridge with variable substitution
+x = x[..., 4]
 lambda_ = .7
 w_pet = np.array(model)
 Y = y - lambda_ * np.dot(x, w_pet.T)

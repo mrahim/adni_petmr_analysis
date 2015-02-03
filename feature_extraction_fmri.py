@@ -10,40 +10,9 @@ Created on Tue Jan 20 13:15:00 2015
 import os
 import numpy as np
 import nibabel as nib
-from fetch_data import fetch_adni_petmr
+from fetch_data import fetch_adni_petmr, fetch_adni_masks
 from joblib import delayed, Parallel
-
-
-def get_sphere_coords(center, radius):
-    coords_list = [np.array(center)]
-
-    for r in np.linspace(0, radius, 10):
-        for theta in np.linspace(0, np.pi, 10):
-            for phi in np.linspace(0, 2*np.pi, 10):
-                x = center[0] + r*np.sin(theta)*np.cos(phi)
-                y = center[1] + r*np.sin(theta)*np.sin(phi)
-                z = center[2] + r*np.cos(theta)
-                coords_list.append(np.array([x, y, z]))
-                
-    return np.vstack(coords_list)
-
-def mni_to_indices(mni_coords_list, affine):
-    
-    ### inverse affine
-    inv_affine = np.linalg.inv(affine)
-    ### transform    
-    mni_coords_list = np.hstack((mni_coords_list,
-                                 np.ones((mni_coords_list.shape[0],1))))
-    coords_list = np.tensordot(inv_affine.reshape(4, 4, 1),
-                               mni_coords_list.T.reshape(4, 1, mni_coords_list.shape[0])).T[:,:-1]
-                           
-    ### extract unique coords
-    coords_list = np.floor(coords_list)
-    cl = np.ascontiguousarray(coords_list).view(np.dtype((np.void, coords_list.dtype.itemsize * coords_list.shape[1])))
-    _, idx = np.unique(cl, return_index=True)
-    coords_list_unique = np.array(coords_list[idx], dtype=np.int)
-    return coords_list_unique
-
+from nilearn.input_data import NiftiLabelsMasker, NiftiMasker
 
 def fast_corr(a, b):
     """ fast correlation
@@ -60,47 +29,54 @@ def fast_corr(a, b):
     return cov / var
 
 
+def fmri_connectivity(func_file, img_masker, seeds_masker, subject_id):
+    ### 1-Extract seeds
+    ### 2-Extract fMRI voxels
+    ### 3-Compute correlations for each voxel
 
-
-def extract_seed_subjects(func_files, subject_list, mni_coords, output_folder):
-    if not os.path.isdir(os.path.join(FMRI_PATH, output_folder)):
-        os.mkdir(os.path.join(FMRI_PATH, output_folder))
-    affine = nib.load(func_files[0]).get_affine()
-    mni_coords_list = get_sphere_coords(mni_coords, 5)
-    seed_indices = mni_to_indices(mni_coords_list, affine)
-    n_func_files = len(func_files)
+    seeds_values = seeds_masker.transform(func_file)
+    fmri_values = img_masker.transform(func_file)
     
-    Parallel(n_jobs=10, verbose=2)(\
-    delayed(extract_seed_subject)(func_files[i], seed_indices,
-                                  output_folder, subject_list[i])\
-                                  for i in np.arange(n_func_files))
+    n_seeds = seeds_values.shape[1]
+    n_voxels = fmri_values.shape[1]
+    
+    a = np.tile(np.tile(seeds_values, (1,1,1)), (n_voxels,1,1))
+    b = np.tile(np.tile(fmri_values, (1,1,1)), (n_seeds,1,1))
 
+    a1 = np.transpose(a, (1,0,2))
+    b1 = np.transpose(b, (1,2,0))
 
-def extract_seed_subject(func_file, seed_indices, output_folder, subject_id):
-    img = nib.load(func_file)
-    seed_values = img.get_data()[tuple((seed_indices[:,0].T,
-                                        seed_indices[:,1].T,
-                                        seed_indices[:,2].T))]
-    np.save(os.path.join(FMRI_PATH, output_folder, subject_id),
-            seed_values)
+    c = fast_corr(a1,b1)
+    np.savez_compressed(os.path.join(FMRI_DIR, subject_id), corr=c)
 
 
 ### set paths
 FIG_PATH = '/disk4t/mehdi/data/tmp/figures'
-FEAT_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'features',
-                        'smooth_preproc')
+FEAT_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'features')
+FMRI_DIR = os.path.join(FEAT_DIR, 'smooth_preproc', 'fmri_subjects_nodetrend')
 CACHE_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'tmp')
-FMRI_PATH = os.path.join('/', 'disk4t', 'mehdi', 'data', 'features',
-                         'smooth_preproc', 'fmri_subjects')
 
-### fetch fmri
+### fetch fmri, load masks and seeds
 dataset = fetch_adni_petmr()
 func_files = dataset['func']
 subject_list = dataset['subjects']
-dx_group = np.array(dataset['dx_group'])
-idx = {}
-for g in ['AD', 'LMCI', 'EMCI', 'Normal']:
-    idx[g] = np.where(dx_group == g)
+mask = fetch_adni_masks()
+seeds_img = os.path.join(FEAT_DIR, 'masks', 'seeds_fmri.nii.gz')
 
-seed_mni_coords = [0, -44, -34] #Visual
-extract_seed_subjects(func_files, subject_list, seed_mni_coords, 'visual_seed_subjects')
+### Labels
+lmasker = NiftiLabelsMasker(labels_img=seeds_img, mask_img=mask['mask_petmr'],
+                            resampling_target='labels', detrend=False,
+                            standardize=False, t_r=3.,
+                            memory=CACHE_DIR, memory_level=2)
+lmasker.labels_img_ = nib.load(seeds_img)
+lmasker.mask_img_ = nib.load(mask['mask_petmr'])
+
+### fMRI
+fmasker = NiftiMasker(mask_img=mask['mask_petmr'], detrend=False, t_r=3.,
+                      memory=CACHE_DIR, memory_level=2)
+fmasker.mask_img_ = nib.load(mask['mask_petmr'])
+
+
+Parallel(n_jobs=10, verbose=5)(delayed(fmri_connectivity)\
+       (func_files[i], fmasker, lmasker, subject_list[i])\
+       for i in range(len(func_files)))

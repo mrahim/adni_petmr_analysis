@@ -45,7 +45,7 @@ fmri_resampled_mask = resample_img(fmri_mask,
 
 # 2- Intersect the masks                                  
 petmr_mask = intersect_masks([pet_mask, fmri_resampled_mask])
-petmr_mask.mask_img_.to_filename(os.path.join(MASK_DIR, 'mask_petmr.nii.gz'))
+petmr_mask.to_filename(os.path.join(MASK_DIR, 'mask_petmr.nii.gz'))
 
 
 # Plot the masks !
