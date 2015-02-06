@@ -8,31 +8,18 @@ Created on Tue Feb  3 18:41:34 2015
 import os
 import numpy as np
 import nibabel as nib
-from sklearn.svm import SVC
-from sklearn.cross_validation import StratifiedShuffleSplit
-from fetch_data import fetch_adni_petmr, fetch_adni_masks
+from fetch_data import fetch_adni_petmr, fetch_adni_masks,\
+                       set_features_base_dir, set_cache_base_dir
 import matplotlib.pyplot as plt
-from nilearn.decoding import SpaceNetClassifier
 
-from nilearn.input_data import NiftiMasker, MultiNiftiMasker
-
-FIG_PATH = '/disk4t/mehdi/data/tmp/figures'
+from nilearn.decoding import SpaceNetRegressor
 
 
 def array_to_niis(data, mask_img):
-    
-    masker = MultiNiftiMasker(mask_img=mask_img, memory_level=2, memory=CACHE_DIR)
-    masker.mask_img_ = mask_img
-    ### data (subject, voxel, seed)
-    
-    imgs = []
-    for k in range(data.shape[2]):
-        img = []
-        for j in range(data.shape[0]):
-            img.append(masker.inverse_transform(data[j,:,k]))
-        imgs.append(img)
-    return imgs
-
+    data_ = np.zeros(data.shape[:1] + mask_img.shape)
+    data_[:, mask_img.get_data().astype(np.bool)] = data[..., ..., 0]
+    data_ = np.transpose(data_, axes=(1,2,3,0))
+    return nib.Nifti1Image(data_, mask_img.get_affine())
 
 def plot_shufflesplit(score, groups, title, filename):
     bp = plt.boxplot(score, 0, '', 0)
@@ -59,12 +46,15 @@ def plot_shufflesplit(score, groups, title, filename):
         plt.savefig(os.path.join(FIG_PATH, fname), transparent=False)
 
 
-FEAT_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'features')
-CACHE_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'tmp')
-CORR_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'features',
-                        'smooth_preproc', 'fmri_subjects')
+
+### Set paths
+FEAT_DIR = set_features_base_dir()
+CACHE_DIR = set_cache_base_dir()
+CORR_DIR = os.path.join(FEAT_DIR, 'smooth_preproc', 'fmri_subjects')
+FIG_PATH = os.path.join(CACHE_DIR, 'figures')
 
 
+### Load masks and dataset
 masks = fetch_adni_masks()
 
 dataset = fetch_adni_petmr()
@@ -82,10 +72,23 @@ for i in np.arange(len(fmri)):
     X.append(np.load(os.path.join(CORR_DIR, subj_list[i]+'.npz'))['corr'])
 X = np.array(X)
 
+
 mask_img = nib.load(masks['mask_petmr'])
 img = array_to_niis(X, mask_img)
 
 
+y = np.zeros(X.shape[0])
+y[idx['AD']]=1
+
+
+snr = SpaceNetRegressor(penalty='smooth-lasso', eps=1e-1,
+                        memory=CACHE_DIR, n_jobs=10)
+snr.fit(img, y)
+
+
+
+
+"""
 groups = [['AD' , 'Normal']]
 scores = []
 coeffs = []
@@ -120,12 +123,4 @@ for k in range(X.shape[2]):
     scores.append(score)
     coeffs.append(np.mean(coeff, axis=0))
     break
-"""
-### SVM coeffs
-for k in range(X.shape[2]):
-    np.savez_compressed(os.path.join(FEAT_DIR, 'fmri_models',
-                                     'sn_coeffs_fmri_seed_'+str(k)),
-                        svm_coeffs=coeffs[k],
-                        idx=idx,
-                        subjects=dataset['subjects'])
 """
