@@ -12,7 +12,9 @@ from fetch_data import fetch_adni_petmr, fetch_adni_masks,\
                        set_features_base_dir, set_cache_base_dir
 import matplotlib.pyplot as plt
 
-from nilearn.decoding import SpaceNetRegressor
+from nilearn.decoding import SpaceNetClassifier
+from sklearn.cross_validation import StratifiedShuffleSplit
+from sklearn.metrics import accuracy_score
 
 
 def array_to_niis(data, mask_img, k=0):
@@ -85,31 +87,30 @@ x = np.concatenate((g1_feat, g2_feat), axis=0)
 y = np.ones(len(x))
 y[len(x) - len(g2_feat):] = 0
 
-from nilearn.decoding import SpaceNetClassifier
-from sklearn.cross_validation import StratifiedShuffleSplit
-
 scores = []
 coeffs = []
 for k in range(X.shape[2]):
-        print k              
-        sss = StratifiedShuffleSplit(y, n_iter=50, test_size=.2)
-        cpt = 0
-        score = []
-        coeff = []
-        for train, test in sss:
-            x_train = x[train]
-            y_train = y[train]
-            x_test = x[test]
-            y_test = y[test]
-            
-            decoder = SpaceNetClassifier(penalty='smooth-lasso', eps=1e-1,
-                                         n_jobs=10, memory=CACHE_DIR)
-            img_train = array_to_niis(x_train, mask_img, k)
-            decoder.fit(img_train, y_train)
-            img_test = array_to_niis(x_test, mask_img, k)
-            score.append(decoder.score(img_test,y_test))
-            coeff.append(decoder.all_coef_)
-            cpt += 1
-            print cpt
-        scores.append(score)
-        coeffs.append(np.mean(coeff, axis=0))
+    print k              
+    sss = StratifiedShuffleSplit(y, n_iter=10, test_size=.2)
+    cpt = 0
+    score = []
+    coeff = []
+    for train, test in sss:
+        x_train = x[train]
+        y_train = y[train]
+        x_test = x[test]
+        y_test = y[test]
+        
+        decoder = SpaceNetClassifier(penalty='smooth-lasso', eps=1e-1,
+                                     mask=mask_img,
+                                     n_jobs=10, memory=CACHE_DIR)
+        img_train = array_to_niis(x_train, mask_img, k)
+        decoder.fit(img_train, y_train)
+        img_test = array_to_niis(x_test, mask_img, k)
+        
+        score.append(accuracy_score(y_test, decoder.predict(img_test)))
+        coeff.append(decoder.all_coef_)
+        cpt += 1
+        print cpt
+    scores.append(score)
+    coeffs.append(np.mean(coeff, axis=0))

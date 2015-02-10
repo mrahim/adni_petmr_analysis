@@ -30,19 +30,13 @@ idx = data.set_group_indices(dataset['dx_group'])
 ind = np.concatenate((idx['AD'][0], idx['Normal'][0]))
 dx = np.concatenate((np.ones(len(idx['AD'][0])),
                      np.zeros(len(idx['Normal'][0]))))
-"""
-x = X[ind,:20:]
-x = np.hstack((x,
-               np.tile(dx, (1, 1)).T))
 
-y = np.array(Y[ind], dtype=np.int)
-#y = y - np.min(y)
-"""
+#x = X[ind,:]
+#y = Y[ind]
+x = X
+y = Y
 
-x = X[ind, :20:]
-y = Y[ind]
-
-ss = ShuffleSplit(len(y), n_iter=1)
+ss = ShuffleSplit(len(y), n_iter=100)
 
 score = []
 for train, test in ss:
@@ -52,15 +46,9 @@ for train, test in ss:
     x_test = x[test]
     y_test = y[test]
 
-    parameters = {'kernel': ('linear', 'rbf'), 'C': np.logspace(-5,5,51)}
-    svr = SVR()
-    grd = GridSearchCV(svr, parameters, n_jobs=3)
-    grd.fit(x_train, y_train)
-    score.append(grd.score(x_test, y_test))
-    y_predict = grd.predict(x_test)    
-    """
-    svr.fit(x_train, y_train)
-    score.append(svr.score(x_test, y_test))
-    y_predict = svr.predict(x_test)
-    """
+    rdg = RidgeCV(alphas = np.logspace(-3, 3, 7))
+    rdg.fit(x_train, y_train)
+    score.append(rdg.score(x_test, y_test))
+    y_predict = rdg.predict(x_test)
+
 print score

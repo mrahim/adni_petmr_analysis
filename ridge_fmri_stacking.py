@@ -28,50 +28,50 @@ from fetch_data import set_cache_base_dir, set_features_base_dir
 
 
 
-def ridge_apriori(a, y, w_pet, lambda_=.7, k=0, n_iter=100):
-    x = a[...,k]    
-    Y = y - lambda_ * np.dot(x, w_pet.T)
-    X = x
+def ridge_apriori(a, y, w_pet, lambda_=.7, n_iter=100):
     
-    rdg = RidgeCV(alphas=np.logspace(-3, 3, 70))
-    rdg.fit(X,Y)
     
-    ### original weights
-    w = rdg.coef_[0, :].T - lambda_ * w_pet
-    y_predict = np.dot(X, w.T)
-    
-    ### logistic regression on ridge + a priori
-    lgr = LogisticRegression()
-    lgr.fit(y_predict, y)
-    
-    ### fmri classification
-    lgr = LogisticRegression()
-    lgr.fit(x, y)
-    
+    y_predict = []
+    for k in range(a.shape[2]):
+        x = a[...,k]
+        Y = y - lambda_ * np.dot(x, w_pet.T)
+        rdg = RidgeCV(alphas=np.logspace(-3, 3, 70))
+        X = x
+        rdg.fit(X,Y)    
+        ### original weights (var substitution)
+        w = rdg.coef_[0, :].T - lambda_ * w_pet
+        # y_predict is the regression result of the ridge+PETapriori
+        y_predict.append(np.dot(X, w.T))
+        
+        
     ### ShuffleSplit comparison
     ss = StratifiedShuffleSplit(y, n_iter=n_iter, test_size=.2)
-    fmri_scores = []
-    rdg_scores = []
+    fmri_predict = []
+    rdg_predict = []
     cpt = 0
     for train, test in ss:
-        x_train = x[train]
-        y_train = y[train]
-        x_test = x[test]
-        y_test = y[test]
-        lgr = LogisticRegression()
-        lgr.fit(x_train, y_train)
-        s1 = lgr.score(x_test, y_test)
-        fmri_scores.append(s1)
+        fmri_pr = []
+        rdg_pr = []
+        for k in range(a.shape[2]):
+            x = a[...,k]
+            x_train = x[train]
+            y_train = y[train]
+            x_test = x[test]
+            y_test = y[test]
+            lgr = LogisticRegression()
+            lgr.fit(x_train, y_train)
+            fmri_pr.append(lgr.predict_proba(x_test))
         
-        y_predict = np.dot(x_test, w.T)
-        lgr = LogisticRegression()
-        lgr.fit(y_predict, y_test)
-        s2 = lgr.score(y_predict, y_test)
-        rdg_scores.append(s2)
+            y_p = y_predict[k][test]
+            lgr = LogisticRegression()
+            lgr.fit(y_p, y_test)
+            rdg_pr.append(lgr.predict_proba(y_p))
+
+        fmri_predict.append(fmri_pr)
+        rdg_predict.append(rdg_pr)
         cpt += 1
         print cpt
-    return 0
-
+    return fmri_predict, rdg_predict
 
 ### set paths
 CACHE_DIR = set_cache_base_dir()
@@ -110,95 +110,10 @@ y = np.ones(len(x))
 y[len(x) - len(g2_feat):] = 0
 
 a = np.copy(x)
+w_pet = np.array(model)
+
 ### Ridge with variable substitution
-for k in range(7):
+proba = []
+for k in range(1):
+    proba.append(ridge_apriori(a, y, w_pet, lambda_=.7, n_iter=5))
     
-    x = a[...,k]
-    lambda_ = .7
-    w_pet = np.array(model)
-    Y = y - lambda_ * np.dot(x, w_pet.T)
-    X = x
-    
-    rdg = RidgeCV(alphas=np.logspace(-3, 3, 70))
-    rdg.fit(X,Y)
-    
-    ### original weights
-    w = rdg.coef_[0, :].T - lambda_ * w_pet
-    y_predict = np.dot(X, w.T)
-    
-    ### logistic regression on ridge
-    lgr = LogisticRegression()
-    lgr.fit(y_predict, y)
-    print lgr.score(y_predict, y)
-    
-    ### fmri classification
-    lgr = LogisticRegression()
-    lgr.fit(x, y)
-    print lgr.score(x, y)
-    
-    ### ShuffleSplit comparison
-    ss = StratifiedShuffleSplit(y, n_iter=50, test_size=.2)
-    fmri_scores = []
-    rdg_scores = []
-    cpt = 0
-    for train, test in ss:
-        x_train = x[train]
-        y_train = y[train]
-        x_test = x[test]
-        y_test = y[test]
-        lgr = LogisticRegression()
-        lgr.fit(x_train, y_train)
-        s1 = lgr.score(x_test, y_test)
-        fmri_scores.append(s1)
-        
-        y_predict = np.dot(x_test, w.T)
-        lgr = LogisticRegression()
-        lgr.fit(y_predict, y_test)
-        s2 = lgr.score(y_predict, y_test)
-        rdg_scores.append(s2)
-        cpt += 1
-        print cpt, s1, s2
-        
-    
-    plot_diffs = True
-    rdg_scores = np.array(rdg_scores)
-    fmri_scores = np.array(fmri_scores)
-    neg_idx = np.where(rdg_scores - fmri_scores < 0)
-    
-    bp = plt.boxplot([fmri_scores, rdg_scores])
-    for key in bp.keys():
-        for box in bp[key]:
-            box.set(linewidth=2)
-    plt.grid(axis='y')
-    plt.xticks([1, 2] , ['fMRI', 'fMRI+PET model'], fontsize=17)
-    plt.ylabel('Accuracy (%)', fontsize=17)
-    plt.ylim([0.2, 1.0])
-    plt.yticks(np.linspace(.2, 1.0, 9), np.arange(20,110,10), fontsize=17)
-    plt.title('AD/MCI classification accuracies', fontsize=18)
-    if plot_diffs:
-        plt.plot([1,2],[fmri_scores, rdg_scores],'--c')
-        plt.plot([1,2],[fmri_scores[neg_idx], rdg_scores[neg_idx]],'--r')
-    plt.tight_layout()
-    
-    blue_line = mlines.Line2D([], [], linewidth=2, color='c', label='+')
-    red_line = mlines.Line2D([], [], linewidth=2, color='r', label='-')
-    plt.legend(handles=[blue_line, red_line])
-    plt.savefig(os.path.join(FIG_DIR, 'output'+str(k)+'.png'))
-    plt.savefig(os.path.join(FIG_DIR, 'output'+str(k)+'.pdf'))
-    
-    
-    from scipy.stats import wilcoxon
-    _, pval = wilcoxon(rdg_scores, fmri_scores)
-    plt.figure()
-    bp = plt.boxplot(rdg_scores-fmri_scores)
-    for key in bp.keys():
-        for box in bp[key]:
-            box.set(linewidth=2)
-    plt.xticks([] , [])
-    plt.ylabel('Difference', fontsize=17)
-    plt.yticks(np.linspace(-.5, .5, 11), np.linspace(-.5, .5, 11), fontsize=17)
-    plt.grid(axis='y')
-    plt.tight_layout()
-    plt.title('Wilcoxon pval = '+str('10^-%.2f' % -np.log10(pval)), fontsize=17)
-    plt.savefig(os.path.join(FIG_DIR, 'output'+str(k)+'-diff.png'))
-    plt.savefig(os.path.join(FIG_DIR, 'output'+str(k)+'-diff.pdf'))
