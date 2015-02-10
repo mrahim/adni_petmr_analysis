@@ -46,16 +46,21 @@ def learn_pet_coeffs(img_files, indices, mask):
     """Returns SVM coeffs learned on PET dataset
     """
     
+    n_iter = 100    
+    
     X = apply_mask(img_files, mask)
     
     ### AD / NC classification
     g1_feat = X[idx['AD'][0]]
-    g2_feat = X[idx['Normal'][0]]
+    idx_ = np.hstack((idx['LMCI'][0], idx['EMCI'][0]))
+    #g2_feat = X[idx['Normal'][0]]
+    g2_feat = X[idx_]
+    
     
     x = np.concatenate((g1_feat, g2_feat), axis=0)
     y = np.ones(len(x))
     y[len(x) - len(g2_feat):] = 0
-    sss = StratifiedShuffleSplit(y, n_iter=100, test_size=.2)
+    sss = StratifiedShuffleSplit(y, n_iter=n_iter, test_size=.2)
     cpt = 0
     score = []
     coeff = []
@@ -70,22 +75,24 @@ def learn_pet_coeffs(img_files, indices, mask):
         coeff.append(svm.coef_)
         score.append(svm.score(x_test, y_test))
         cpt += 1
-        print cpt,'/100'
+        print cpt,'/',str(n_iter)
     
     return np.mean(coeff, axis=0), np.array(score)
     
+from fetch_data import set_cache_base_dir, set_features_base_dir
 
-FEAT_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data',
-                        'features', 'pet_models')
-CACHE_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'tmp')
+FEAT_DIR = set_features_base_dir() 
+PET_DIR = os.path.join(FEAT_DIR, 'pet_models')
+CACHE_DIR = set_cache_base_dir()
 
 ### Load pet data and mask
 mask = fetch_adni_masks()
 
 datasets = {}
-datasets['petmr'] = fetch_adni_petmr()
-datasets['pet_diff']  = fetch_adni_fdg_pet_diff()
+#datasets['petmr'] = fetch_adni_petmr()
+#datasets['pet_diff']  = fetch_adni_fdg_pet_diff()
 datasets['pet'] = fetch_adni_fdg_pet()
+all_scores = []
 
 for key in datasets.keys():
     print key
@@ -94,7 +101,8 @@ for key in datasets.keys():
     idx = {}
     for g in ['AD', 'LMCI', 'EMCI', 'Normal']:
         idx[g] = np.where(dx_group == g)
-    coeffs, _ = learn_pet_coeffs(dataset['pet'], idx, mask['mask_petmr'])
-    np.savez_compressed(os.path.join(FEAT_DIR, 'svm_coeffs_' + key),
+    coeffs, scores = learn_pet_coeffs(dataset['pet'], idx, mask['mask_petmr'])
+    np.savez_compressed(os.path.join(PET_DIR, 'ad_mci_svm_coeffs_' + key),
                         svm_coeffs=coeffs, subjects=dataset['subjects'],
                         idx=idx)
+    all_scores.append(scores)

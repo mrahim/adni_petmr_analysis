@@ -23,11 +23,57 @@ import matplotlib.lines as mlines
 from sklearn.linear_model import RidgeCV, LogisticRegression
 from sklearn.cross_validation import StratifiedShuffleSplit
 from fetch_data import fetch_adni_petmr
+from fetch_data import set_cache_base_dir, set_features_base_dir
+
+
+
+
+def ridge_apriori(a, y, w_pet, lambda_=.7, k=0, n_iter=100):
+    x = a[...,k]    
+    Y = y - lambda_ * np.dot(x, w_pet.T)
+    X = x
+    
+    rdg = RidgeCV(alphas=np.logspace(-3, 3, 70))
+    rdg.fit(X,Y)
+    
+    ### original weights
+    w = rdg.coef_[0, :].T - lambda_ * w_pet
+    y_predict = np.dot(X, w.T)
+    
+    ### logistic regression on ridge + a priori
+    lgr = LogisticRegression()
+    lgr.fit(y_predict, y)
+    
+    ### fmri classification
+    lgr = LogisticRegression()
+    lgr.fit(x, y)
+    
+    ### ShuffleSplit comparison
+    ss = StratifiedShuffleSplit(y, n_iter=n_iter, test_size=.2)
+    fmri_scores = []
+    rdg_scores = []
+    cpt = 0
+    for train, test in ss:
+        x_train = x[train]
+        y_train = y[train]
+        x_test = x[test]
+        y_test = y[test]
+        lgr = LogisticRegression()
+        lgr.fit(x_train, y_train)
+        s1 = lgr.score(x_test, y_test)
+        fmri_scores.append(s1)
+        
+        y_predict = np.dot(x_test, w.T)
+        lgr = LogisticRegression()
+        lgr.fit(y_predict, y_test)
+        s2 = lgr.score(y_predict, y_test)
+        rdg_scores.append(s2)
+        cpt += 1
+        print cpt
+    return 0
 
 
 ### set paths
-from fetch_data import set_cache_base_dir, set_features_base_dir
-
 CACHE_DIR = set_cache_base_dir()
 FIG_DIR = os.path.join(CACHE_DIR, 'figures', 'petmr')
 FEAT_DIR = set_features_base_dir()

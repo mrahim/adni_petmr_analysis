@@ -15,9 +15,9 @@ import matplotlib.pyplot as plt
 from nilearn.decoding import SpaceNetRegressor
 
 
-def array_to_niis(data, mask_img):
+def array_to_niis(data, mask_img, k=0):
     data_ = np.zeros(data.shape[:1] + mask_img.shape)
-    data_[:, mask_img.get_data().astype(np.bool)] = data[..., ..., 0]
+    data_[:, mask_img.get_data().astype(np.bool)] = data[..., ..., k]
     data_ = np.transpose(data_, axes=(1,2,3,0))
     return nib.Nifti1Image(data_, mask_img.get_affine())
 
@@ -66,45 +66,33 @@ idx = {}
 for g in ['AD', 'LMCI', 'EMCI', 'Normal']:
     idx[g] = np.where(dx_group == g)
 
+
 ### load fMRI features
 X = []
 for i in np.arange(len(fmri)):
     X.append(np.load(os.path.join(CORR_DIR, subj_list[i]+'.npz'))['corr'])
 X = np.array(X)
 
-
+### load mask
 mask_img = nib.load(masks['mask_petmr'])
-img = array_to_niis(X, mask_img)
 
 
-y = np.zeros(X.shape[0])
-y[idx['AD']]=1
+### set x, y
+g1_feat = X[idx['AD'][0], ...]
+idx_ = np.hstack((idx['LMCI'][0], idx['EMCI'][0]))
+g2_feat = X[idx_]
+x = np.concatenate((g1_feat, g2_feat), axis=0)
+y = np.ones(len(x))
+y[len(x) - len(g2_feat):] = 0
 
+from nilearn.decoding import SpaceNetClassifier
+from sklearn.cross_validation import StratifiedShuffleSplit
 
-snr = SpaceNetRegressor(penalty='smooth-lasso', eps=1e-1,
-                        memory=CACHE_DIR, n_jobs=10)
-snr.fit(img, y)
-
-
-
-
-"""
-groups = [['AD' , 'Normal']]
 scores = []
 coeffs = []
 for k in range(X.shape[2]):
-    X = np.array(img[k])
-    score = []
-    for gr in groups:
-        g1_feat = X[idx[gr[0]][0]]
-        idx_ = idx[gr[1]][0]
-        g2_feat = X[idx_]
-        x = np.concatenate((g1_feat, g2_feat), axis=0)
-        y = np.ones(len(x))
-        y[len(x) - len(g2_feat):] = 0
-
-               
-        sss = StratifiedShuffleSplit(y, n_iter=5, test_size=.2)
+        print k              
+        sss = StratifiedShuffleSplit(y, n_iter=50, test_size=.2)
         cpt = 0
         score = []
         coeff = []
@@ -114,13 +102,14 @@ for k in range(X.shape[2]):
             x_test = x[test]
             y_test = y[test]
             
-            decoder = SpaceNetClassifier(penalty='smooth-lasso', n_jobs=10, memory=CACHE_DIR)
-            decoder.fit(x_train, y_train)
-            score.append(decoder.score(x_test,y_test))
+            decoder = SpaceNetClassifier(penalty='smooth-lasso', eps=1e-1,
+                                         n_jobs=10, memory=CACHE_DIR)
+            img_train = array_to_niis(x_train, mask_img, k)
+            decoder.fit(img_train, y_train)
+            img_test = array_to_niis(x_test, mask_img, k)
+            score.append(decoder.score(img_test,y_test))
             coeff.append(decoder.all_coef_)
             cpt += 1
             print cpt
-    scores.append(score)
-    coeffs.append(np.mean(coeff, axis=0))
-    break
-"""
+        scores.append(score)
+        coeffs.append(np.mean(coeff, axis=0))
