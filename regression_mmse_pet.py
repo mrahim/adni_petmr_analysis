@@ -25,18 +25,22 @@ print "masking"
 X = apply_mask(dataset['pet'], mask['mask_petmr'])
 Y = np.array(dataset['mmscores'])
 
-
 idx = data.set_group_indices(dataset['dx_group'])
-ind = np.concatenate((idx['AD'][0], idx['Normal'][0]))
+
+idx_ = np.hstack((idx['LMCI'][0], idx['EMCI'][0]))
+
+ind = np.concatenate((idx['AD'][0], idx['LMCI'][0]))
+dx = np.concatenate((np.ones(len(idx['AD'][0])), np.zeros(len(idx['LMCI'][0]))))
+"""
+ind = np.concatenate((idx['AD'][0], idx_))
 dx = np.concatenate((np.ones(len(idx['AD'][0])),
-                     np.zeros(len(idx['Normal'][0]))))
+                     np.zeros(len(idx_))))
+"""
+x = X[ind,:]
+y = Y[ind]
 
-#x = X[ind,:]
-#y = Y[ind]
-x = X
-y = Y
 
-ss = ShuffleSplit(len(y), n_iter=100)
+ss = ShuffleSplit(len(y), n_iter=10)
 
 score = []
 for train, test in ss:

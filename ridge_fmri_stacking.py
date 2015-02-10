@@ -59,19 +59,15 @@ def ridge_apriori(a, y, w_pet, lambda_=.7, n_iter=100):
             y_test = y[test]
             lgr = LogisticRegression()
             lgr.fit(x_train, y_train)
-            fmri_pr.append(lgr.predict_proba(x_test)[0, :])
+            fmri_pr.append(lgr.predict_proba(x_test)[:, 0])
         
             y_p = y_predict[k][test]
             lgr = LogisticRegression()
             lgr.fit(y_p, y_test)
-            rdg_pr.append(lgr.predict_proba(y_p)[0, :])
-
+            rdg_pr.append(lgr.predict_proba(y_p)[:, 0])
+  
         rdg_pr = np.array(rdg_pr)
-        lgr = LogisticRegression()
-        lgr.fit(rdg_pr, y_test)
-        print lgr.score(rdg_pr, y_test)
-        
-        
+        print rdg_pr.shape
         fmri_predict.append(fmri_pr)
         rdg_predict.append(rdg_pr)
         cpt += 1
@@ -118,4 +114,4 @@ a = np.copy(x)
 w_pet = np.array(model)
 
 ### Ridge with variable substitution
-fmri_proba, rdg_proba = ridge_apriori(a, y, w_pet, lambda_=.7, n_iter=5)
+fmri_proba, rdg_proba = ridge_apriori(a, y, w_pet, lambda_=.7, n_iter=1)
