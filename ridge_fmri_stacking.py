@@ -118,5 +118,5 @@ a = np.copy(x)
 w_pet = np.array(model)
 
 ### Ridge with variable substitution
-fmri_scores, rdg_scores = ridge_apriori(a, y, w_pet, lambda_=3.7, n_iter=100)
+fmri_scores, rdg_scores = ridge_apriori(a, y, w_pet, lambda_=.7, n_iter=10)
 plt.boxplot([fmri_scores, rdg_scores])

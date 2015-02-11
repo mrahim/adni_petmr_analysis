@@ -91,7 +91,7 @@ scores = []
 coeffs = []
 for k in range(X.shape[2]):
     print k              
-    sss = StratifiedShuffleSplit(y, n_iter=100, test_size=.2)
+    sss = StratifiedShuffleSplit(y, n_iter=10, test_size=.2)
     cpt = 0
     score = []
     coeff = []
