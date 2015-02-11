@@ -6,7 +6,6 @@ Created on Wed Feb 11 15:21:34 2015
 """
 
 import numpy as np
-from sklearn.cross_validation import StratifiedShuffleSplit
 from sklearn.linear_model import LogisticRegression
 
 class PriorClassifier:
