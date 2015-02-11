@@ -26,8 +26,6 @@ from fetch_data import fetch_adni_petmr
 from fetch_data import set_cache_base_dir, set_features_base_dir
 
 
-
-
 def ridge_apriori(a, y, w_pet, lambda_=.7, n_iter=100):
     
     y_predict = []
@@ -45,8 +43,8 @@ def ridge_apriori(a, y, w_pet, lambda_=.7, n_iter=100):
         
     ### ShuffleSplit comparison
     ss = StratifiedShuffleSplit(y, n_iter=n_iter, test_size=.2)
-    fmri_predict = []
-    rdg_predict = []
+    fmri_scores = []
+    rdg_scores = []
     cpt = 0
     for train, test in ss:
         fmri_pr = []
@@ -65,14 +63,20 @@ def ridge_apriori(a, y, w_pet, lambda_=.7, n_iter=100):
             lgr = LogisticRegression()
             lgr.fit(y_p, y_test)
             rdg_pr.append(lgr.predict_proba(y_p)[:, 0])
-  
-        rdg_pr = np.array(rdg_pr)
-        print rdg_pr.shape
-        fmri_predict.append(fmri_pr)
-        rdg_predict.append(rdg_pr)
+          
+        fmri_predict = np.array(fmri_pr).T
+        rdg_predict = np.array(rdg_pr).T
+        
+        blr = LogisticRegression()
+        blr.fit(fmri_predict, y_test)
+        fmri_scores.append(blr.score(fmri_predict, y_test))
+
+        blr = LogisticRegression()
+        blr.fit(rdg_predict, y_test)
+        rdg_scores.append(blr.score(rdg_predict, y_test))
         cpt += 1
         print cpt
-    return fmri_predict, rdg_predict
+    return fmri_scores, rdg_scores
 
 ### set paths
 CACHE_DIR = set_cache_base_dir()
@@ -114,4 +118,5 @@ a = np.copy(x)
 w_pet = np.array(model)
 
 ### Ridge with variable substitution
-fmri_proba, rdg_proba = ridge_apriori(a, y, w_pet, lambda_=.7, n_iter=1)
+fmri_scores, rdg_scores = ridge_apriori(a, y, w_pet, lambda_=3.7, n_iter=100)
+plt.boxplot([fmri_scores, rdg_scores])
