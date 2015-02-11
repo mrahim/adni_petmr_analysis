@@ -40,3 +40,6 @@ class PriorClassifier:
         lr = LogisticRegression()
         lr.fit(y_predict, y)
         return lr.score(y_predict, y)
+        
+
+
