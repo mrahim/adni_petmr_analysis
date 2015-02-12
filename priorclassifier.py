@@ -23,7 +23,7 @@ class PriorClassifier:
     scores_: Accuracies
     """
     
-    def __init__(self, regressor, prior, lambda_):
+    def __init__(self, regressor, prior, lambda_=.7):
         self.regressor = regressor
         self.prior = prior
         self.lambda_ = lambda_
@@ -40,6 +40,3 @@ class PriorClassifier:
         lr = LogisticRegression()
         lr.fit(y_predict, y)
         return lr.score(y_predict, y)
-        
-
-
