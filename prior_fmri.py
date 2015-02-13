@@ -53,8 +53,8 @@ x = np.concatenate((g1_feat, g2_feat), axis=0)
 y = np.ones(len(x))
 y[len(x) - len(g2_feat):] = 0
 
-sss = StratifiedShuffleSplit(y, n_iter=10, test_size=.2)
-ss = ShuffleSplit(len(y), n_iter=10, test_size=.2)
+sss = StratifiedShuffleSplit(y, n_iter=100, test_size=.2)
+ss = ShuffleSplit(len(y), n_iter=100, test_size=.2)
 
 rdgc = RidgeCV(alphas=np.logspace(-3, 3, 7))
 regressor = {'ridge': rdgc}
@@ -65,6 +65,7 @@ for key in regressor.keys():
     print key
     scores = []
     scores_prior = []
+    
     for train, test in ss:
         x_train = x[train]
         y_train = y[train]
@@ -84,7 +85,7 @@ for key in regressor.keys():
             rdgc.fit(xtrain, y_train)
             x_train_stacked.append(rdgc.predict(xtrain))
             x_test_stacked.append(rdgc.predict(xtest))            
-            print rdgc.score(xtest, y_test)
+            #print rdgc.score(xtest, y_test)
             
             rdgc = RidgeCV(alphas=np.logspace(-3, 3, 7))
             pc = PriorClassifier(rdgc, w_pet, .7)
@@ -92,7 +93,7 @@ for key in regressor.keys():
             x_train_stacked_prior.append(pc.predict(xtrain))
             x_test_stacked_prior.append(pc.predict(xtest))
             sc.append(pc.score(xtest, y_test))
-            print 'prior', pc.score(xtest, y_test)
+            #print 'prior', pc.score(xtest, y_test)
 
         x_train_ = np.asarray(x_train_stacked).T
         x_test_ = np.asarray(x_test_stacked).T
@@ -108,4 +109,10 @@ for key in regressor.keys():
         scores_prior.append(lgr.score(x_test_prior_,  y_test))        
         print 'stacking prior', lgr.score(x_test_prior_,  y_test)
 
+plt.figure()
 plt.boxplot([scores, scores_prior])
+plt.plot([1,2],[scores, scores_prior],'--c')
+scores_prior = np.array(scores_prior)
+scores = np.array(scores)
+neg_idx = np.where(scores_prior - scores < 0)
+plt.plot([1,2],[scores[neg_idx], scores_prior[neg_idx]],'--r')
