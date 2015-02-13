@@ -9,7 +9,8 @@ import os
 import numpy as np
 import nibabel as nib
 from nilearn.input_data import NiftiLabelsMasker
-from fetch_data import fetch_adni_petmr, fetch_adni_masks
+from fetch_data import fetch_adni_petmr, fetch_adni_masks,\
+                       set_cache_base_dir, set_features_base_dir
 
 
 def get_sphere_coords(center, radius):
@@ -64,11 +65,10 @@ def create_seeds_image(seeds_mni_coords, ref_img):
 
 
 ### set paths
-FIG_PATH = '/disk4t/mehdi/data/tmp/figures'
-FEAT_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'features')
-CACHE_DIR = os.path.join('/', 'disk4t', 'mehdi', 'data', 'tmp')
-FMRI_PATH = os.path.join('/', 'disk4t', 'mehdi', 'data', 'features',
-                         'smooth_preproc', 'fmri_subjects')
+FEAT_DIR = set_features_base_dir()
+CACHE_DIR = set_cache_base_dir()
+FIG_PATH = os.path.join(CACHE_DIR, 'figures')
+FMRI_PATH = os.path.join(FEAT_DIR, 'smooth_preproc', 'fmri_subjects')
 
 ### fetch masks
 mask = fetch_adni_masks()

@@ -53,7 +53,7 @@ x = np.concatenate((g1_feat, g2_feat), axis=0)
 y = np.ones(len(x))
 y[len(x) - len(g2_feat):] = 0
 
-n_iter = 10
+n_iter = 100
 
 sss = StratifiedShuffleSplit(y, n_iter=n_iter, test_size=.2,
                              random_state=np.random.seed(42))
@@ -92,7 +92,7 @@ for key in regressor.keys():
             #print rdgc.score(xtest, y_test)
                         
             rdgc = RidgeCV(alphas=np.logspace(-3, 3, 7))
-            pc = PriorClassifier(rdgc, w_pet, .7)
+            pc = PriorClassifier(rdgc, w_pet, 3.7)
             pc.fit(xtrain, y_train)
             x_train_stacked_prior.append(pc.predict(xtrain))
             x_test_stacked_prior.append(pc.predict(xtest))

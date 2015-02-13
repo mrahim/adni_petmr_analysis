@@ -59,14 +59,14 @@ from fetch_data import set_cache_base_dir, set_features_base_dir
 CACHE_DIR = set_cache_base_dir()
 FIG_PATH = os.path.join(CACHE_DIR, 'figures')
 FEAT_DIR = set_features_base_dir()
-FMRI_DIR = os.path.join(FEAT_DIR, 'smooth_preproc', 'fmri_subjects')
+FMRI_DIR = os.path.join(FEAT_DIR, 'smooth_preproc', 'fmri_subjects_msdl')
 
 ### fetch fmri, load masks and seeds
 dataset = fetch_adni_petmr()
 func_files = dataset['func']
 subject_list = dataset['subjects']
 mask = fetch_adni_masks()
-seeds_img = os.path.join(FEAT_DIR, 'masks', 'seeds_fmri.nii.gz')
+seeds_img = os.path.join(FEAT_DIR, 'masks', 'msdl_seeds_fmri.nii.gz')
 
 ### Labels
 lmasker = NiftiLabelsMasker(labels_img=seeds_img, mask_img=mask['mask_petmr'],
