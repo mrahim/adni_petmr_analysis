@@ -86,9 +86,15 @@ seeds_mni_coords=[[0, -52, 30], #PCC
                   [44, -46, 48], #RPC
                   [0, 54, 18]] #Medial prefrontal
 
+from nilearn.datasets import fetch_msdl_atlas
+atlas = fetch_msdl_atlas()
+seeds_mni_coords = np.loadtxt(atlas['labels'], dtype=np.float, delimiter=',\t',
+                          skiprows=1, usecols=(0,1,2))
+
+
 seeds_img = create_seeds_image(seeds_mni_coords, mask['mask_pet'])
 
-seeds_img.to_filename(os.path.join(FEAT_DIR, 'masks', 'seeds_fmri.nii.gz'))
+seeds_img.to_filename(os.path.join(FEAT_DIR, 'masks', 'msdl_seeds_fmri.nii.gz'))
 
 ### Test on image
 lmasker = NiftiLabelsMasker(labels_img=seeds_img, detrend=True, standardize=True)

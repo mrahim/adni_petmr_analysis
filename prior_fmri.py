@@ -40,10 +40,10 @@ X = np.array(X)
 
 ### load PET a priori
 pet_model_path = os.path.join(FEAT_DIR, 'pet_models',
-                              'ad_mci_svm_coeffs_pet_diff.npz')
+                              'svm_coeffs_pet_diff.npz')
 model = np.load(pet_model_path)['svm_coeffs']
 w_pet = np.array(model)
-
+w_pet = w_pet/np.max(w_pet)
 ### prepare data
 g1_feat = X[idx['AD'][0]]
 #idx_ = idx['Normal'][0]
@@ -53,8 +53,12 @@ x = np.concatenate((g1_feat, g2_feat), axis=0)
 y = np.ones(len(x))
 y[len(x) - len(g2_feat):] = 0
 
-sss = StratifiedShuffleSplit(y, n_iter=100, test_size=.2)
-ss = ShuffleSplit(len(y), n_iter=100, test_size=.2)
+n_iter = 10
+
+sss = StratifiedShuffleSplit(y, n_iter=n_iter, test_size=.2,
+                             random_state=np.random.seed(42))
+ss = ShuffleSplit(len(y), n_iter=n_iter, test_size=.2,
+                  random_state=np.random.seed(42))
 
 rdgc = RidgeCV(alphas=np.logspace(-3, 3, 7))
 regressor = {'ridge': rdgc}
@@ -66,7 +70,7 @@ for key in regressor.keys():
     scores = []
     scores_prior = []
     
-    for train, test in ss:
+    for train, test in sss:
         x_train = x[train]
         y_train = y[train]
         x_test = x[test]
@@ -74,19 +78,19 @@ for key in regressor.keys():
         
         sc = []
         x_train_stacked_prior = []
-        x_test_stacked_prior = []        
+        x_test_stacked_prior = []
         x_train_stacked = []
-        x_test_stacked = []        
+        x_test_stacked = []
         for k in range(7):
             xtrain = x_train[..., k]
             xtest = x_test[..., k]
-    
+            
             rdgc = RidgeCV(alphas=np.logspace(-3, 3, 7))
             rdgc.fit(xtrain, y_train)
             x_train_stacked.append(rdgc.predict(xtrain))
-            x_test_stacked.append(rdgc.predict(xtest))            
+            x_test_stacked.append(rdgc.predict(xtest))
             #print rdgc.score(xtest, y_test)
-            
+                        
             rdgc = RidgeCV(alphas=np.logspace(-3, 3, 7))
             pc = PriorClassifier(rdgc, w_pet, .7)
             pc.fit(xtrain, y_train)
@@ -99,7 +103,7 @@ for key in regressor.keys():
         x_test_ = np.asarray(x_test_stacked).T
         lgr = LogisticRegression()
         lgr.fit(x_train_, y_train)
-        scores.append(lgr.score(x_test_,  y_test))        
+        scores.append(lgr.score(x_test_,  y_test))
         print 'stacking', lgr.score(x_test_,  y_test)
 
         x_train_prior_ = np.asarray(x_train_stacked_prior)[..., 0].T
@@ -112,6 +116,7 @@ for key in regressor.keys():
 plt.figure()
 plt.boxplot([scores, scores_prior])
 plt.plot([1,2],[scores, scores_prior],'--c')
+plt.ylim([0.2, 1.0])
 scores_prior = np.array(scores_prior)
 scores = np.array(scores)
 neg_idx = np.where(scores_prior - scores < 0)
