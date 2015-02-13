@@ -53,8 +53,6 @@ y[len(x) - len(g2_feat):] = 0
 from sklearn.cross_validation import StratifiedShuffleSplit
 from sklearn.linear_model import RidgeCV, Ridge, RidgeClassifierCV,\
                           LogisticRegression
-from sklearn.metrics import accuracy_score
-from sklearn.preprocessing import StandardScaler
 
 sss = StratifiedShuffleSplit(y, n_iter=10, test_size=.2)
 

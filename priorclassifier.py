@@ -35,6 +35,9 @@ class PriorClassifier:
         ### original weights (var substitution)
         self.wprior_ = self.regressor.coef_ - self.lambda_ * self.prior.T[:, 0]        
     
+    def predict(self, x):
+        return np.tile(np.dot(x, self.wprior_), (1,1)).T
+    
     def score(self, x, y):
         y_predict = np.tile(np.dot(x, self.wprior_), (1,1)).T
         lr = LogisticRegression()

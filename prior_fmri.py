@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 """
+Use the 
+
+
 Created on Wed Feb 11 15:54:46 2015
 
 @author: mehdi.rahim@cea.fr
@@ -11,8 +14,8 @@ import numpy as np
 from fetch_data import set_features_base_dir, fetch_adni_petmr,\
                         set_cache_base_dir
 
-from sklearn.cross_validation import StratifiedShuffleSplit
-from sklearn.linear_model import RidgeCV, ElasticNetCV, LassoCV
+from sklearn.cross_validation import StratifiedShuffleSplit, ShuffleSplit
+from sklearn.linear_model import RidgeCV, LogisticRegression
 import matplotlib.pyplot as plt
 
 ### set paths
@@ -44,51 +47,65 @@ w_pet = np.array(model)
 ### prepare data
 g1_feat = X[idx['AD'][0]]
 #idx_ = idx['Normal'][0]
-idx_ = np.hstack((idx['Normal'][0], idx['EMCI'][0]))
+idx_ = np.hstack((idx['LMCI'][0], idx['EMCI'][0]))
 g2_feat = X[idx_]
 x = np.concatenate((g1_feat, g2_feat), axis=0)
 y = np.ones(len(x))
 y[len(x) - len(g2_feat):] = 0
 
-
-sss = StratifiedShuffleSplit(y, n_iter=100, test_size=.2)
-
-all_scores = {}
-seeds_scores = []
-rdgp_scores = []
-rdgpet_scores = []
-yp = []
-cpt = 0
+sss = StratifiedShuffleSplit(y, n_iter=10, test_size=.2)
+ss = ShuffleSplit(len(y), n_iter=10, test_size=.2)
 
 rdgc = RidgeCV(alphas=np.logspace(-3, 3, 7))
-lasso = LassoCV(alphas=np.logspace(-3, 3, 7), n_jobs=10)
-enet = ElasticNetCV(alphas=np.logspace(-3, 3, 7), n_jobs=10)
+regressor = {'ridge': rdgc}
 
-regressor = {'ridge': rdgc,
-             'lasso': lasso,
-             'elasticnet': enet}
+all_scores = {}
 
 for key in regressor.keys():
     print key
-    seeds_scores = []
-    for k in range(7):
-        scores = []
-        for train, test in sss:
-            x_train = x[train]
-            y_train = y[train]
-            x_test = x[test]
-            y_test = y[test]
-            
+    scores = []
+    scores_prior = []
+    for train, test in ss:
+        x_train = x[train]
+        y_train = y[train]
+        x_test = x[test]
+        y_test = y[test]
+        
+        sc = []
+        x_train_stacked_prior = []
+        x_test_stacked_prior = []        
+        x_train_stacked = []
+        x_test_stacked = []        
+        for k in range(7):
             xtrain = x_train[..., k]
             xtest = x_test[..., k]
-        
-            pc = PriorClassifier(regressor[key], w_pet, .7)
+    
+            rdgc = RidgeCV(alphas=np.logspace(-3, 3, 7))
+            rdgc.fit(xtrain, y_train)
+            x_train_stacked.append(rdgc.predict(xtrain))
+            x_test_stacked.append(rdgc.predict(xtest))            
+            print rdgc.score(xtest, y_test)
+            
+            rdgc = RidgeCV(alphas=np.logspace(-3, 3, 7))
+            pc = PriorClassifier(rdgc, w_pet, .7)
             pc.fit(xtrain, y_train)
-            scores.append(pc.score(xtest, y_test))
-        print '--'
-        seeds_scores.append(scores)
-    all_scores[key] = seeds_scores
+            x_train_stacked_prior.append(pc.predict(xtrain))
+            x_test_stacked_prior.append(pc.predict(xtest))
+            sc.append(pc.score(xtest, y_test))
+            print 'prior', pc.score(xtest, y_test)
 
-np.savez_compressed(os.path.join(FEAT_DIR, 'regressors_scores'),
-                    all_scores=all_scores,
-                    sss=sss)
+        x_train_ = np.asarray(x_train_stacked).T
+        x_test_ = np.asarray(x_test_stacked).T
+        lgr = LogisticRegression()
+        lgr.fit(x_train_, y_train)
+        scores.append(lgr.score(x_test_,  y_test))        
+        print 'stacking', lgr.score(x_test_,  y_test)
+
+        x_train_prior_ = np.asarray(x_train_stacked_prior)[..., 0].T
+        x_test_prior_ = np.asarray(x_test_stacked_prior)[..., 0].T
+        lgr = LogisticRegression()
+        lgr.fit(x_train_prior_, y_train)
+        scores_prior.append(lgr.score(x_test_prior_,  y_test))        
+        print 'stacking prior', lgr.score(x_test_prior_,  y_test)
+
+plt.boxplot([scores, scores_prior])
