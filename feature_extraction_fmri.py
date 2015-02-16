@@ -12,7 +12,7 @@ import numpy as np
 import nibabel as nib
 from fetch_data import fetch_adni_petmr, fetch_adni_masks
 from nilearn.input_data import NiftiLabelsMasker, NiftiMasker
-
+from nilearn.image import index_img
 def fast_corr(a, b):
     """ fast correlation
         a : time x voxels x [subjects]
@@ -34,23 +34,32 @@ def fmri_connectivity(func_file, img_masker, seeds_masker, subject_id):
     ### 3-Compute correlations for each voxel
 
     if not os.path.isfile(os.path.join(FMRI_DIR, subject_id + '.npz')):
+        
         seeds_values = seeds_masker.transform(func_file)
         fmri_values = img_masker.transform(func_file)
-    
+        
         n_seeds = seeds_values.shape[1]
         n_voxels = fmri_values.shape[1]
-        
-        a = np.tile(np.tile(seeds_values, (1,1,1)), (n_voxels,1,1))
-        b = np.tile(np.tile(fmri_values, (1,1,1)), (n_seeds,1,1))
+        print seeds_values.shape, fmri_values.shape
+        c = []
+        for i in range(n_voxels):
+            fmri_vox = np.tile(fmri_values[:, i], (39, 1)).T
+            c.append(fast_corr(seeds_values, fmri_vox))
+        np.savez_compressed(os.path.join(FMRI_DIR, subject_id),
+                            corr=np.array(c))
+
+"""        
+        seeds_values = np.tile(np.tile(seeds_values, (1,1,1)), (n_voxels,1,1))
+        fmri_values = np.tile(np.tile(fmri_values, (1,1,1)), (n_seeds,1,1))
     
-        a1 = np.transpose(a, (1,0,2))
-        b1 = np.transpose(b, (1,2,0))
-    
-        c = fast_corr(a1,b1)
+        seeds_values = np.transpose(seeds_values, (1,0,2))
+        fmri_values = np.transpose(fmri_values, (1,2,0))
+
+        print fmri_values.shape
+        print seeds_values.shape            
+        c = fast_corr(seeds_values, fmri_values)
         np.savez_compressed(os.path.join(FMRI_DIR, subject_id), corr=c)
-
-
-
+"""
 #######################################################
 #######################################################
 
@@ -82,6 +91,5 @@ fmasker = NiftiMasker(mask_img=mask['mask_petmr'], detrend=False, t_r=3.,
 fmasker.mask_img_ = nib.load(mask['mask_petmr'])
 
 ### connectiviy
-for i in range(len(func_files)):
+for i in range(1):
     fmri_connectivity(func_files[i], fmasker, lmasker, subject_list[i])
-

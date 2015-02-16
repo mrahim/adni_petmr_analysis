@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 CACHE_DIR = set_cache_base_dir()
 FIG_DIR = os.path.join(CACHE_DIR, 'figures', 'petmr')
 FEAT_DIR = set_features_base_dir()
-FMRI_DIR = os.path.join(FEAT_DIR, 'smooth_preproc', 'fmri_subjects')
+FMRI_DIR = os.path.join(FEAT_DIR, 'smooth_preproc', 'fmri_subjects_msdl')
 
 
 ### load fMRI features
@@ -36,22 +36,21 @@ for g in ['AD', 'LMCI', 'EMCI', 'Normal']:
 X = []
 for i in np.arange(len(subj_list)):
     X.append(np.load(os.path.join(FMRI_DIR, subj_list[i]+'.npz'))['corr'])
-X = np.array(X)
+X = np.array(X, copy=False)
 
 ### load PET a priori
 pet_model_path = os.path.join(FEAT_DIR, 'pet_models',
                               'svm_coeffs_pet_diff.npz')
 model = np.load(pet_model_path)['svm_coeffs']
 w_pet = np.array(model)
-w_pet = w_pet/np.max(w_pet)
+#w_pet = w_pet/np.max(w_pet)
 ### prepare data
 g1_feat = X[idx['AD'][0]]
 #idx_ = idx['Normal'][0]
 idx_ = np.hstack((idx['LMCI'][0], idx['EMCI'][0]))
 g2_feat = X[idx_]
-x = np.concatenate((g1_feat, g2_feat), axis=0)
-y = np.ones(len(x))
-y[len(x) - len(g2_feat):] = 0
+y = np.ones(len(idx['AD'][0]) + len(idx_))
+y[len(y) - len(g2_feat):] = 0
 
 n_iter = 100
 
@@ -71,19 +70,24 @@ for key in regressor.keys():
     scores_prior = []
     
     for train, test in sss:
-        x_train = x[train]
-        y_train = y[train]
-        x_test = x[test]
-        y_test = y[test]
         
         sc = []
         x_train_stacked_prior = []
         x_test_stacked_prior = []
         x_train_stacked = []
         x_test_stacked = []
-        for k in range(7):
+        for k in range(X.shape[2]):
+            print k
+            x = np.concatenate((g1_feat[..., k], g2_feat[..., k]), axis=0)
+            xtrain = x[train]
+            y_train = y[train]
+            xtest = x[test]
+            y_test = y[test]
+
+            """
             xtrain = x_train[..., k]
             xtest = x_test[..., k]
+            """
             
             rdgc = RidgeCV(alphas=np.logspace(-3, 3, 7))
             rdgc.fit(xtrain, y_train)
@@ -92,8 +96,9 @@ for key in regressor.keys():
             #print rdgc.score(xtest, y_test)
                         
             rdgc = RidgeCV(alphas=np.logspace(-3, 3, 7))
-            pc = PriorClassifier(rdgc, w_pet, 3.7)
-            pc.fit(xtrain, y_train)
+            pc = PriorClassifier(rdgc, w_pet, .7)
+            #pc.fit(xtrain, y_train)
+            pc.fit(x[:-20,...], y[:-20 ])
             x_train_stacked_prior.append(pc.predict(xtrain))
             x_test_stacked_prior.append(pc.predict(xtest))
             sc.append(pc.score(xtest, y_test))
