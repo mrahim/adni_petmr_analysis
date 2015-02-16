@@ -40,7 +40,7 @@ X = np.array(X, copy=False)
 
 ### load PET a priori
 pet_model_path = os.path.join(FEAT_DIR, 'pet_models',
-                              'svm_coeffs_pet_diff.npz')
+                              'ad_mci_svm_coeffs_pet_diff.npz')
 model = np.load(pet_model_path)['svm_coeffs']
 w_pet = np.array(model)
 #w_pet = w_pet/np.max(w_pet)
@@ -118,6 +118,7 @@ for key in regressor.keys():
         scores_prior.append(lgr.score(x_test_prior_,  y_test))        
         print 'stacking prior', lgr.score(x_test_prior_,  y_test)
 
+"""
 plt.figure()
 plt.boxplot([scores, scores_prior])
 plt.plot([1,2],[scores, scores_prior],'--c')
@@ -126,3 +127,7 @@ scores_prior = np.array(scores_prior)
 scores = np.array(scores)
 neg_idx = np.where(scores_prior - scores < 0)
 plt.plot([1,2],[scores[neg_idx], scores_prior[neg_idx]],'--r')
+"""
+
+np.savez_compressed('prior_msdl', scores=scores, scores_prior=scores_prior)
+
