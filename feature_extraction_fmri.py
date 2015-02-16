@@ -34,22 +34,19 @@ def fmri_connectivity(func_file, img_masker, seeds_masker, subject_id):
     ### 3-Compute correlations for each voxel
 
     if not os.path.isfile(os.path.join(FMRI_DIR, subject_id + '.npz')):
+        
         seeds_values = seeds_masker.transform(func_file)
         fmri_values = img_masker.transform(func_file)
-    
+        
         n_seeds = seeds_values.shape[1]
         n_voxels = fmri_values.shape[1]
         
-        a = np.tile(np.tile(seeds_values, (1,1,1)), (n_voxels,1,1))
-        b = np.tile(np.tile(fmri_values, (1,1,1)), (n_seeds,1,1))
-    
-        a1 = np.transpose(a, (1,0,2))
-        b1 = np.transpose(b, (1,2,0))
-    
-        c = fast_corr(a1,b1)
-        np.savez_compressed(os.path.join(FMRI_DIR, subject_id), corr=c)
-
-
+        c = []
+        for i in range(n_voxels):
+            fmri_vox = np.tile(fmri_values[:, i], (39, 1)).T
+            c.append(fast_corr(seeds_values, fmri_vox))
+        np.savez_compressed(os.path.join(FMRI_DIR, subject_id),
+                            corr=np.array(c))
 
 #######################################################
 #######################################################
@@ -81,7 +78,12 @@ fmasker = NiftiMasker(mask_img=mask['mask_petmr'], detrend=False, t_r=3.,
                       memory=CACHE_DIR, memory_level=2)
 fmasker.mask_img_ = nib.load(mask['mask_petmr'])
 
-### connectiviy
-for i in range(len(func_files)):
+### connectivity
+from joblib import Parallel, delayed
+Parallel(n_jobs=10, verbose=5)(delayed(fmri_connectivity)(func_files[i], fmasker, lmasker, subject_list[i]) for i in range(len(func_files)))
+"""
+for i in np.arange(1, len(func_files), 2):
+    print i
     fmri_connectivity(func_files[i], fmasker, lmasker, subject_list[i])
+"""
 

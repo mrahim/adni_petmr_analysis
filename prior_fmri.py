@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 CACHE_DIR = set_cache_base_dir()
 FIG_DIR = os.path.join(CACHE_DIR, 'figures', 'petmr')
 FEAT_DIR = set_features_base_dir()
-FMRI_DIR = os.path.join(FEAT_DIR, 'smooth_preproc', 'fmri_subjects')
+FMRI_DIR = os.path.join(FEAT_DIR, 'smooth_preproc', 'fmri_subjects_msdl')
 
 
 ### load fMRI features
@@ -40,7 +40,7 @@ X = np.array(X)
 
 ### load PET a priori
 pet_model_path = os.path.join(FEAT_DIR, 'pet_models',
-                              'svm_coeffs_pet_diff.npz')
+                              'ad_mci_svm_coeffs_pet_diff.npz')
 model = np.load(pet_model_path)['svm_coeffs']
 w_pet = np.array(model)
 w_pet = w_pet/np.max(w_pet)
@@ -81,7 +81,8 @@ for key in regressor.keys():
         x_test_stacked_prior = []
         x_train_stacked = []
         x_test_stacked = []
-        for k in range(7):
+        for k in range(x.shape[2]):
+	    print k
             xtrain = x_train[..., k]
             xtest = x_test[..., k]
             
@@ -93,7 +94,7 @@ for key in regressor.keys():
                         
             rdgc = RidgeCV(alphas=np.logspace(-3, 3, 7))
             pc = PriorClassifier(rdgc, w_pet, 3.7)
-            pc.fit(xtrain, y_train)
+            pc.fit(x[..., k], y)
             x_train_stacked_prior.append(pc.predict(xtrain))
             x_test_stacked_prior.append(pc.predict(xtest))
             sc.append(pc.score(xtest, y_test))
@@ -113,6 +114,7 @@ for key in regressor.keys():
         scores_prior.append(lgr.score(x_test_prior_,  y_test))        
         print 'stacking prior', lgr.score(x_test_prior_,  y_test)
 
+"""
 plt.figure()
 plt.boxplot([scores, scores_prior])
 plt.plot([1,2],[scores, scores_prior],'--c')
@@ -121,3 +123,7 @@ scores_prior = np.array(scores_prior)
 scores = np.array(scores)
 neg_idx = np.where(scores_prior - scores < 0)
 plt.plot([1,2],[scores[neg_idx], scores_prior[neg_idx]],'--r')
+"""
+
+np.savez_compressed('prior_msdl', scores=scores, scores_prior=scores_prior)
+
