@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 CACHE_DIR = set_cache_base_dir()
 FIG_DIR = os.path.join(CACHE_DIR, 'figures', 'petmr')
 FEAT_DIR = set_features_base_dir()
-FMRI_DIR = os.path.join(FEAT_DIR, 'smooth_preproc', 'fmri_subjects_msdl')
+FMRI_DIR = os.path.join(FEAT_DIR, 'smooth_preproc', 'fmri_subjects_msdl_atlas')
 
 
 ### load fMRI features
@@ -52,7 +52,7 @@ g2_feat = X[idx_]
 y = np.ones(len(idx['AD'][0]) + len(idx_))
 y[len(y) - len(g2_feat):] = 0
 
-n_iter = 100
+n_iter = 10
 
 sss = StratifiedShuffleSplit(y, n_iter=n_iter, test_size=.2,
                              random_state=np.random.seed(42))
@@ -98,7 +98,7 @@ for key in regressor.keys():
             rdgc = RidgeCV(alphas=np.logspace(-3, 3, 7))
             pc = PriorClassifier(rdgc, w_pet, .7)
             #pc.fit(xtrain, y_train)
-            pc.fit(x[:-20,...], y[:-20 ])
+            pc.fit(x[:,...], y[:])
             x_train_stacked_prior.append(pc.predict(xtrain))
             x_test_stacked_prior.append(pc.predict(xtest))
             sc.append(pc.score(xtest, y_test))
@@ -129,5 +129,5 @@ neg_idx = np.where(scores_prior - scores < 0)
 plt.plot([1,2],[scores[neg_idx], scores_prior[neg_idx]],'--r')
 """
 
-np.savez_compressed('prior_msdl', scores=scores, scores_prior=scores_prior)
+#np.savez_compressed('prior_msdl_atlas', scores=scores, scores_prior=scores_prior)
 
