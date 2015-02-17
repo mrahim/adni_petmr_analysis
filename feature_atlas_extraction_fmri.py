@@ -68,7 +68,7 @@ mask = fetch_adni_masks()
 
 atlas = fetch_msdl_atlas()
 mmasker = NiftiMapsMasker(maps_img=atlas['maps'], mask_img=mask['mask_petmr'],
-                            resampling_target='labels', detrend=True,
+                            resampling_target='data', detrend=True,
                             standardize=False, t_r=3.)
 mmasker.maps_img_ = nib.load(atlas['maps'])
 mmasker.mask_img_ = nib.load(mask['mask_petmr'])
