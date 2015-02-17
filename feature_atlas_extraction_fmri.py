@@ -43,7 +43,7 @@ def fmri_connectivity(func_file, img_masker, map_masker, subject_id):
         
         c = []
         for i in range(n_voxels):
-            fmri_vox = np.tile(fmri_values[:, i], (39, 1)).T
+            fmri_vox = np.tile(fmri_values[:, i], (68, 1)).T
             c.append(fast_corr(map_values, fmri_vox))
         np.savez_compressed(os.path.join(FMRI_DIR, subject_id),
                             corr=np.array(c))
@@ -56,7 +56,7 @@ from fetch_data import set_cache_base_dir, set_features_base_dir
 CACHE_DIR = set_cache_base_dir()
 FIG_PATH = os.path.join(CACHE_DIR, 'figures')
 FEAT_DIR = set_features_base_dir()
-FMRI_DIR = os.path.join(FEAT_DIR, 'smooth_preproc', 'fmri_subjects_msdl_atlas')
+FMRI_DIR = os.path.join(FEAT_DIR, 'smooth_preproc', 'fmri_subjects_68rois')
 
 ### fetch fmri, load masks and seeds
 dataset = fetch_adni_petmr()
@@ -66,11 +66,13 @@ mask = fetch_adni_masks()
 
 ### Labels
 
-atlas = fetch_msdl_atlas()
-mmasker = NiftiMapsMasker(maps_img=atlas['maps'], mask_img=mask['mask_petmr'],
+atlas = os.path.join(FEAT_DIR, 'masks', '68ROIs', '68rois_4d.nii.gz')
+
+
+mmasker = NiftiMapsMasker(maps_img=atlas, mask_img=mask['mask_petmr'],
                             resampling_target='data', detrend=True,
                             standardize=False, t_r=3.)
-mmasker.maps_img_ = nib.load(atlas['maps'])
+mmasker.maps_img_ = nib.load(atlas)
 mmasker.mask_img_ = nib.load(mask['mask_petmr'])
 
 ### fMRI
@@ -80,7 +82,7 @@ fmasker.mask_img_ = nib.load(mask['mask_petmr'])
 
 ### connectivity
 from joblib import Parallel, delayed
-Parallel(n_jobs=10, verbose=5)(delayed(fmri_connectivity)\
+Parallel(n_jobs=30, verbose=5)(delayed(fmri_connectivity)\
 (func_files[i], fmasker, mmasker, subject_list[i]) for i in range(len(func_files)))
 """
 for i in np.arange(1, len(func_files), 2):

@@ -62,14 +62,14 @@ from fetch_data import set_cache_base_dir, set_features_base_dir
 CACHE_DIR = set_cache_base_dir()
 FIG_PATH = os.path.join(CACHE_DIR, 'figures')
 FEAT_DIR = set_features_base_dir()
-FMRI_DIR = os.path.join(FEAT_DIR, 'smooth_preproc', 'fmri_subjects_msdl')
+FMRI_DIR = os.path.join(FEAT_DIR, 'smooth_preproc', 'fmri_subjects_68rois')
 
 ### fetch fmri, load masks and seeds
 dataset = fetch_adni_petmr()
 func_files = dataset['func']
 subject_list = dataset['subjects']
 mask = fetch_adni_masks()
-seeds_img = os.path.join(FEAT_DIR, 'masks', 'msdl_seeds_fmri.nii.gz')
+seeds_img = os.path.join(FEAT_DIR, 'masks', '68ROIs', '68rois_4d.nii.gz')
 
 ### Labels
 lmasker = NiftiLabelsMasker(labels_img=seeds_img, mask_img=mask['mask_petmr'],
@@ -87,7 +87,7 @@ fmasker.mask_img_ = nib.load(mask['mask_petmr'])
 
 ### connectivity
 from joblib import Parallel, delayed
-Parallel(n_jobs=10, verbose=5)(delayed(fmri_connectivity)(func_files[i], fmasker, lmasker, subject_list[i]) for i in range(len(func_files)))
+Parallel(n_jobs=20, verbose=5)(delayed(fmri_connectivity)(func_files[i], fmasker, lmasker, subject_list[i]) for i in range(len(func_files)))
 """
 for i in np.arange(1, len(func_files), 2):
     print i

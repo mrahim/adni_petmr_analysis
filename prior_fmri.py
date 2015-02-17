@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 CACHE_DIR = set_cache_base_dir()
 FIG_DIR = os.path.join(CACHE_DIR, 'figures', 'petmr')
 FEAT_DIR = set_features_base_dir()
-FMRI_DIR = os.path.join(FEAT_DIR, 'smooth_preproc', 'fmri_subjects_msdl_atlas')
+FMRI_DIR = os.path.join(FEAT_DIR, 'smooth_preproc', 'fmri_subjects_68rois')
 
 
 ### load fMRI features
@@ -52,7 +52,7 @@ g2_feat = X[idx_]
 y = np.ones(len(idx['AD'][0]) + len(idx_))
 y[len(y) - len(g2_feat):] = 0
 
-n_iter = 10
+n_iter = 100
 
 sss = StratifiedShuffleSplit(y, n_iter=n_iter, test_size=.2,
                              random_state=np.random.seed(42))
