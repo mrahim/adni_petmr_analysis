@@ -18,6 +18,57 @@ from sklearn.cross_validation import StratifiedShuffleSplit, ShuffleSplit
 from sklearn.linear_model import RidgeCV, LogisticRegression
 import matplotlib.pyplot as plt
 
+
+
+def train_and_test(train, test, g1_feat, g2_feat):
+    x_train_stacked_prior = []
+    x_test_stacked_prior = []
+    x_train_stacked = []
+    x_test_stacked = []
+    for k in range(g1_feat.shape[2]):
+        x = np.concatenate((g1_feat[..., k], g2_feat[..., k]), axis=0)
+        xtrain = x[train]
+        y_train = y[train]
+        xtest = x[test]
+        y_test = y[test]
+
+        """
+        xtrain = x_train[..., k]
+        xtest = x_test[..., k]
+        """
+        
+        rdgc = RidgeCV(alphas=np.logspace(-3, 3, 7))
+        rdgc.fit(xtrain, y_train)
+        x_train_stacked.append(rdgc.predict(xtrain))
+        x_test_stacked.append(rdgc.predict(xtest))
+        #print rdgc.score(xtest, y_test)
+                    
+        rdgc = RidgeCV(alphas=np.logspace(-3, 3, 7))
+        pc = PriorClassifier(rdgc, w_pet, .7)
+        #pc.fit(xtrain, y_train)
+        pc.fit(x[:,...], y[:])
+        x_train_stacked_prior.append(pc.predict(xtrain))
+        x_test_stacked_prior.append(pc.predict(xtest))
+        #sc.append(pc.score(xtest, y_test))
+        #print 'prior', pc.score(xtest, y_test)
+
+    x_train_ = np.asarray(x_train_stacked).T
+    x_test_ = np.asarray(x_test_stacked).T
+    lgr = LogisticRegression()
+    lgr.fit(x_train_, y_train)
+    #scores.append(lgr.score(x_test_,  y_test))
+    a = lgr.score(x_test_,  y_test)
+
+    x_train_prior_ = np.asarray(x_train_stacked_prior)[..., 0].T
+    x_test_prior_ = np.asarray(x_test_stacked_prior)[..., 0].T
+    lgr = LogisticRegression()
+    lgr.fit(x_train_prior_, y_train)
+    #scores_prior.append(lgr.score(x_test_prior_,  y_test))
+    b = lgr.score(x_test_prior_,  y_test)
+    return [a, b]
+
+
+
 ### set paths
 CACHE_DIR = set_cache_base_dir()
 FIG_DIR = os.path.join(CACHE_DIR, 'figures', 'petmr')
@@ -63,61 +114,12 @@ rdgc = RidgeCV(alphas=np.logspace(-3, 3, 7))
 regressor = {'ridge': rdgc}
 
 all_scores = {}
+from joblib import Parallel, delayed
 
-for key in regressor.keys():
-    print key
-    scores = []
-    scores_prior = []
+
+p = Parallel(n_jobs=20, verbose=5)(delayed(train_and_test)\
+(train, test, g1_feat, g2_feat) for train, test in sss)
     
-    for train, test in sss:
-        
-        sc = []
-        x_train_stacked_prior = []
-        x_test_stacked_prior = []
-        x_train_stacked = []
-        x_test_stacked = []
-        for k in range(X.shape[2]):
-            print k
-            x = np.concatenate((g1_feat[..., k], g2_feat[..., k]), axis=0)
-            xtrain = x[train]
-            y_train = y[train]
-            xtest = x[test]
-            y_test = y[test]
-
-            """
-            xtrain = x_train[..., k]
-            xtest = x_test[..., k]
-            """
-            
-            rdgc = RidgeCV(alphas=np.logspace(-3, 3, 7))
-            rdgc.fit(xtrain, y_train)
-            x_train_stacked.append(rdgc.predict(xtrain))
-            x_test_stacked.append(rdgc.predict(xtest))
-            #print rdgc.score(xtest, y_test)
-                        
-            rdgc = RidgeCV(alphas=np.logspace(-3, 3, 7))
-            pc = PriorClassifier(rdgc, w_pet, .7)
-            #pc.fit(xtrain, y_train)
-            pc.fit(x[:,...], y[:])
-            x_train_stacked_prior.append(pc.predict(xtrain))
-            x_test_stacked_prior.append(pc.predict(xtest))
-            sc.append(pc.score(xtest, y_test))
-            #print 'prior', pc.score(xtest, y_test)
-
-        x_train_ = np.asarray(x_train_stacked).T
-        x_test_ = np.asarray(x_test_stacked).T
-        lgr = LogisticRegression()
-        lgr.fit(x_train_, y_train)
-        scores.append(lgr.score(x_test_,  y_test))
-        print 'stacking', lgr.score(x_test_,  y_test)
-
-        x_train_prior_ = np.asarray(x_train_stacked_prior)[..., 0].T
-        x_test_prior_ = np.asarray(x_test_stacked_prior)[..., 0].T
-        lgr = LogisticRegression()
-        lgr.fit(x_train_prior_, y_train)
-        scores_prior.append(lgr.score(x_test_prior_,  y_test))        
-        print 'stacking prior', lgr.score(x_test_prior_,  y_test)
-
 """
 plt.figure()
 plt.boxplot([scores, scores_prior])
