@@ -43,17 +43,17 @@ def fmri_connectivity(func_file, img_masker, seeds_masker, subject_id):
 
         c = []
         for i in range(n_voxels):
-            fmri_vox = np.tile(fmri_values[:, i], (39, 1)).T
+            fmri_vox = np.tile(fmri_values[:, i], (68, 1)).T
             c.append(fast_corr(seeds_values, fmri_vox))
         np.savez_compressed(os.path.join(FMRI_DIR, subject_id),
                             corr=np.array(c))
 
-
+"""
         print fmri_values.shape
         print seeds_values.shape            
         c = fast_corr(seeds_values, fmri_values)
         np.savez_compressed(os.path.join(FMRI_DIR, subject_id), corr=c)
-
+"""
 #######################################################
 #######################################################
 
@@ -62,26 +62,24 @@ from fetch_data import set_cache_base_dir, set_features_base_dir
 CACHE_DIR = set_cache_base_dir()
 FIG_PATH = os.path.join(CACHE_DIR, 'figures')
 FEAT_DIR = set_features_base_dir()
-FMRI_DIR = os.path.join(FEAT_DIR, 'smooth_preproc', 'fmri_subjects_68rois')
+FMRI_DIR = os.path.join(FEAT_DIR, 'smooth_preproc', 'fmri_subjects_68seeds')
 
 ### fetch fmri, load masks and seeds
 dataset = fetch_adni_petmr()
 func_files = dataset['func']
 subject_list = dataset['subjects']
 mask = fetch_adni_masks()
-seeds_img = os.path.join(FEAT_DIR, 'masks', '68ROIs', '68rois_4d.nii.gz')
+seeds_img = os.path.join(FEAT_DIR, 'masks',  '68rois_seeds_fmri.nii.gz')
 
 ### Labels
 lmasker = NiftiLabelsMasker(labels_img=seeds_img, mask_img=mask['mask_petmr'],
                             resampling_target='labels', detrend=True,
-                            standardize=False, t_r=3.,
-                            memory=CACHE_DIR, memory_level=2)
+                            standardize=False, t_r=3.)
 lmasker.labels_img_ = nib.load(seeds_img)
 lmasker.mask_img_ = nib.load(mask['mask_petmr'])
 
 ### fMRI
-fmasker = NiftiMasker(mask_img=mask['mask_petmr'], detrend=False, t_r=3.,
-                      memory=CACHE_DIR, memory_level=2)
+fmasker = NiftiMasker(mask_img=mask['mask_petmr'], detrend=True, t_r=3.)
 fmasker.mask_img_ = nib.load(mask['mask_petmr'])
 
 

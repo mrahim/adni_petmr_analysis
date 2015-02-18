@@ -73,7 +73,7 @@ def train_and_test(train, test, g1_feat, g2_feat):
 CACHE_DIR = set_cache_base_dir()
 FIG_DIR = os.path.join(CACHE_DIR, 'figures', 'petmr')
 FEAT_DIR = set_features_base_dir()
-FMRI_DIR = os.path.join(FEAT_DIR, 'smooth_preproc', 'fmri_subjects_68rois')
+FMRI_DIR = os.path.join(FEAT_DIR, 'smooth_preproc', 'fmri_subjects_68seeds')
 
 
 ### load fMRI features
@@ -117,7 +117,7 @@ all_scores = {}
 from joblib import Parallel, delayed
 
 
-p = Parallel(n_jobs=20, verbose=5)(delayed(train_and_test)\
+p = Parallel(n_jobs=40, verbose=5)(delayed(train_and_test)\
 (train, test, g1_feat, g2_feat) for train, test in sss)
     
 """
