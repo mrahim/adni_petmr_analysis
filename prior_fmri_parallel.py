@@ -15,12 +15,14 @@ from fetch_data import set_features_base_dir, fetch_adni_petmr,\
                         set_cache_base_dir
 
 from sklearn.cross_validation import StratifiedShuffleSplit, ShuffleSplit
-from sklearn.linear_model import RidgeCV, LogisticRegression
+from sklearn.linear_model import RidgeCV, LassoCV, LogisticRegression
 import matplotlib.pyplot as plt
 
 
 
 def train_and_test(train, test, g1_feat, g2_feat):
+    model = []
+    model_prior = []
     x_train_stacked_prior = []
     x_test_stacked_prior = []
     x_train_stacked = []
@@ -37,16 +39,20 @@ def train_and_test(train, test, g1_feat, g2_feat):
         xtest = x_test[..., k]
         """
         
-        rdgc = RidgeCV(alphas=np.logspace(-3, 3, 7))
-        rdgc.fit(xtrain, y_train)
+        #rdgc = RidgeCV(alphas=np.logspace(-3, 3, 7))
+        rdgc = LassoCV()
+	rdgc.fit(xtrain, y_train)
+	model.append(rdgc.coef_)
         x_train_stacked.append(rdgc.predict(xtrain))
         x_test_stacked.append(rdgc.predict(xtest))
         #print rdgc.score(xtest, y_test)
                     
-        rdgc = RidgeCV(alphas=np.logspace(-3, 3, 7))
-        pc = PriorClassifier(rdgc, w_pet, .7)
+        #rdgc = RidgeCV(alphas=np.logspace(-3, 3, 7))
+	rdgc = LassoCV()        
+	pc = PriorClassifier(rdgc, w_pet, .7)
         #pc.fit(xtrain, y_train)
-        pc.fit(x[:,...], y[:])
+   	pc.fit(x[:,...], y[:])
+	model_prior.append(rdgc.coef_)
         x_train_stacked_prior.append(pc.predict(xtrain))
         x_test_stacked_prior.append(pc.predict(xtest))
         #sc.append(pc.score(xtest, y_test))
@@ -65,7 +71,7 @@ def train_and_test(train, test, g1_feat, g2_feat):
     lgr.fit(x_train_prior_, y_train)
     #scores_prior.append(lgr.score(x_test_prior_,  y_test))
     b = lgr.score(x_test_prior_,  y_test)
-    return [a, b]
+    return [model, model_prior]
 
 
 
@@ -91,7 +97,7 @@ X = np.array(X, copy=False)
 
 ### load PET a priori
 pet_model_path = os.path.join(FEAT_DIR, 'pet_models',
-                              'ad_mci_svm_coeffs_pet_diff.npz')
+                              'svm_coeffs_pet_diff.npz')
 model = np.load(pet_model_path)['svm_coeffs']
 w_pet = np.array(model)
 #w_pet = w_pet/np.max(w_pet)
@@ -103,7 +109,7 @@ g2_feat = X[idx_]
 y = np.ones(len(idx['AD'][0]) + len(idx_))
 y[len(y) - len(g2_feat):] = 0
 
-n_iter = 100
+n_iter = 10
 
 sss = StratifiedShuffleSplit(y, n_iter=n_iter, test_size=.2,
                              random_state=np.random.seed(42))
@@ -117,7 +123,7 @@ all_scores = {}
 from joblib import Parallel, delayed
 
 
-p = Parallel(n_jobs=40, verbose=5)(delayed(train_and_test)\
+p = Parallel(n_jobs=10, verbose=5)(delayed(train_and_test)\
 (train, test, g1_feat, g2_feat) for train, test in sss)
     
 """
