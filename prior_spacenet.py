@@ -64,7 +64,7 @@ lambda_ = .7
 from scipy import linalg
 x = X[...,0]
 print 'X_tilde'
-X_tilde = linalg.cholesky(np.dot(x.T, x)+np.eye(x.shape[1]))
+X_tilde = linalg.cholesky(np.dot(x, x.T)+np.eye(x.shape[1]))
 print 'y_tilde'
 X_tilde_inv = linalg.inv(X_tilde)
 y_tilde = np.dot(X_tilde_inv, (np.dot(X,y) + lambda_*w_prior))
