@@ -1,0 +1,48 @@
+\documentclass[12pt]{article}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\newcommand{\B}[1]{\mathbf{#1}}
+\begin{document}
+Let $\B X \in \mathbb{R}^{n \times p}$ denote a feature matrix, where $n$ and $p$ are respectively the numbers of samples (subjects) and variables (voxels).
+$\B y \in \{0, 1\}^{n} $ denote the class (diagnosis) vector of all the samples.
+\\
+The classical ridge regression is to estimate the coefficients $\B w \in \mathbb{R}^{p}$ so that :
+\begin{equation}
+	\min_{\B w} \| \B{Xw - y} \|_2^2 + \alpha \|\B w\|_2^2
+	\label{eq:ridge}
+\end{equation}
+where $\alpha > 0$ is a parameter of the coefficient penalization that controls the amount of shrinkage.
+\\
+The proposed approach integrates the prior within the penalization term of (\ref{eq:ridge}), then :
+\begin{equation}
+	\min_{\B w} \| \B{Xw - y} \|_2^2 + \alpha \|\B w - \lambda \B{ w_{prior}}\|_2^2
+\end{equation}
+where $\B{ w_{prior}}$ is the coefficient matrix from the prior which has been already learned.
+By making $\B b = \B w - \lambda \B{ w_{prior}}$, and the ridge regression formulation will remain the same, as it will return to solve $\B b$.
+
+\paragraph{Adding spatial penalization}
+\begin{equation}
+	\min_{\B w} \| \B{Xw - y} \|_2^2 + \alpha \|\B w - \lambda \B{ w_{prior}}\|_2^2 + \beta J(\B w)
+\end{equation}
+where $J(\B w)$ is the regularization :
+\begin{equation}
+	J(\B w) = \theta \| \B w \|_{{l}_1} + (1-\theta)\| \B w \|_{TV}
+\end{equation}
+We write the loss function $\mathcal{L}$ as :
+\begin{eqnarray*}
+	\mathcal{L}(\B{X, w, y}) & = & \frac{1}{2} \| \B{Xw - y} \|_2^2 + \frac{\alpha}{2} \|\B w - \lambda \B{ w_{prior}}\|_2^2 \\
+	& = & \frac{1}{2}\B{w^tX^TXw} + \frac{\alpha}{2} \B{w^tw} - \B{w^tX^Ty} - \alpha \lambda \B{w^tw_{prior}} + \frac{\alpha}{2} \lambda \B{w_{prior}^tw_{prior}} + \frac{1}{2}\B{y^ty} \\
+	& = & \frac{1}{2} \B{ w^t (X^T X+\alpha I) w - (X^T y + \alpha \lambda w_{prior})^T w + C} \\
+	& \equiv & \frac{1}{2} \B{\| \tilde{X}w - \tilde{y} \|_2^2}
+\end{eqnarray*}
+where :
+\begin{equation}
+	\B{ \tilde{X} = \sqrt{X^TX+\alpha I}}
+\end{equation}
+and 
+\begin{equation}
+	\B{ \tilde{y} = \tilde{X}^{-1}(X^Ty+\alpha \lambda w_{prior})
+	}
+\end{equation}
+
+\end{document}
