@@ -41,7 +41,6 @@ def train_and_test(train, test, g1_feat, g2_feat):
         rdgc.fit(xtrain, y_train)
         x_train_stacked.append(rdgc.predict(xtrain))
         x_test_stacked.append(rdgc.predict(xtest))
-        #print rdgc.score(xtest, y_test)
                     
         rdgc = RidgeCV(alphas=np.logspace(-3, 3, 7))
         pc = PriorClassifier(rdgc, w_pet, .7)
@@ -50,7 +49,6 @@ def train_and_test(train, test, g1_feat, g2_feat):
         x_train_stacked_prior.append(pc.predict(xtrain))
         x_test_stacked_prior.append(pc.predict(xtest))
         #sc.append(pc.score(xtest, y_test))
-        #print 'prior', pc.score(xtest, y_test)
 
     x_train_ = np.asarray(x_train_stacked).T
     x_test_ = np.asarray(x_test_stacked).T
@@ -115,7 +113,6 @@ regressor = {'ridge': rdgc}
 
 all_scores = {}
 from joblib import Parallel, delayed
-
 
 p = Parallel(n_jobs=40, verbose=5)(delayed(train_and_test)\
 (train, test, g1_feat, g2_feat) for train, test in sss)

@@ -30,7 +30,7 @@ class PriorClassifier:
         
     def fit(self, x, y):
         """ Variable transformation """
-        Y = y - (self.lambda_ * np.dot(x, self.prior.T))[:, 0]        
+        Y = y - (self.lambda_ * np.dot(x, self.prior.T))[:, 0]
         self.regressor.fit(x, Y)
         ### original weights (var substitution)
         self.wprior_ = self.regressor.coef_ - self.lambda_ * self.prior.T[:, 0]        

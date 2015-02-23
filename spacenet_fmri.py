@@ -91,7 +91,7 @@ scores = []
 coeffs = []
 for k in range(X.shape[2]):
     print k              
-    sss = StratifiedShuffleSplit(y, n_iter=10, test_size=.2)
+    sss = StratifiedShuffleSplit(y, n_iter=1, test_size=.2)
     cpt = 0
     score = []
     coeff = []
@@ -103,7 +103,7 @@ for k in range(X.shape[2]):
         
         decoder = SpaceNetClassifier(penalty='smooth-lasso', eps=1e-1,
                                      mask=mask_img,
-                                     n_jobs=10, memory=CACHE_DIR)
+                                     n_jobs=20, memory=CACHE_DIR)
         img_train = array_to_niis(x_train, mask_img, k)
         decoder.fit(img_train, y_train)
         img_test = array_to_niis(x_test, mask_img, k)
