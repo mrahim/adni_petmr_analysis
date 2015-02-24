@@ -20,9 +20,9 @@ The proposed approach integrates the prior within the penalization term of (\ref
 where $\B{ w_{prior}}$ is the coefficient matrix from the prior which has been already learned.
 By making $\B b = \B w - \lambda \B{ w_{prior}}$, and the ridge regression formulation will remain the same, as it will return to solve $\B b$.
 
-\paragraph{Adding spatial penalization}
+\paragraph{Adding the spatial penalization}
 \begin{equation}
-	\min_{\B w} \| \B{Xw - y} \|_2^2 + \alpha \|\B w - \lambda \B{ w_{prior}}\|_2^2 + \beta J(\B w)
+	\min_{\B w} \frac{1}{2} \| \B{Xw - y} \|_2^2 + \frac{\alpha}{2} \|\B w - \lambda \B{ w_{prior}}\|_2^2 + \beta J(\B w)
 \end{equation}
 where $J(\B w)$ is the regularization :
 \begin{equation}
@@ -31,18 +31,45 @@ where $J(\B w)$ is the regularization :
 We write the loss function $\mathcal{L}$ as :
 \begin{eqnarray*}
 	\mathcal{L}(\B{X, w, y}) & = & \frac{1}{2} \| \B{Xw - y} \|_2^2 + \frac{\alpha}{2} \|\B w - \lambda \B{ w_{prior}}\|_2^2 \\
-	& = & \frac{1}{2}\B{w^tX^TXw} + \frac{\alpha}{2} \B{w^tw} - \B{w^tX^Ty} - \alpha \lambda \B{w^tw_{prior}} + \frac{\alpha}{2} \lambda \B{w_{prior}^tw_{prior}} + \frac{1}{2}\B{y^ty} \\
+	& = & \frac{1}{2}\B{w^tX^TXw} + \frac{\alpha}{2} \B{w^tw} - \B{w^tX^Ty} - \alpha \lambda \B{w^tw_{prior}} + \frac{\alpha}{2} \lambda^2 \B{w_{prior}^tw_{prior}} + \frac{1}{2}\B{y^ty} \\
 	& = & \frac{1}{2} \B{ w^t (X^T X+\alpha I) w - (X^T y + \alpha \lambda w_{prior})^T w + C} \\
-	& \equiv & \frac{1}{2} \B{\| \tilde{X}w - \tilde{y} \|_2^2}
+	& = & \frac{1}{2} \B{\| \tilde{X}w - \tilde{y} \|_2^2} + C
 \end{eqnarray*}
 where :
 \begin{equation}
 	\B{ \tilde{X} = \sqrt{X^TX+\alpha I}}
 \end{equation}
-and 
+and :
 \begin{equation}
-	\B{ \tilde{y} = \tilde{X}^{-1}(X^Ty+\alpha \lambda w_{prior})
-	}
+	\B{ \tilde{y} = \tilde{X}^{-1}(X^Ty+\alpha \lambda w_{prior})}
 \end{equation}
+
+\paragraph{Avoiding $\B{X^TX}$}
+\begin{eqnarray*}
+	\mathcal{L}(\B{X, w, y}) & = & \frac{1}{2} \| \B{Xw - y} \|_2^2 + \frac{\alpha}{2} \|\B w - \lambda \B{ w_{prior}}\|_2^2 \\
+& = & \frac{1}{2}\B{w^tX^TXw} + \frac{\alpha}{2} \B{w^tw} - \B{w^tX^Ty} - \alpha \lambda \B{w^tw_{prior}} \\
+ & + & \frac{1}{2}\B{y^ty} + \frac{\alpha}{2} \lambda^2 \B{w_{prior}^tw_{prior}} \\
+& = & \frac{1}{2}
+\begin{Vmatrix}
+\begin{bmatrix} \B X\\ \alpha \B I \end{bmatrix} \B w - \begin{bmatrix} \B y \\ \lambda \B{w_{prior}^t} \end{bmatrix}
+\end{Vmatrix}_2^2 
+\end{eqnarray*}
+
+
+%By making : $\B{w=X^Tv}$ , $\B{w_{prior}=X^Tv_{prior}}$ and $\B{K=XX^T}$:
+%\begin{eqnarray*}
+%	\mathcal{L}(\B{X, v, y}) & = & \frac{1}{2}\B{v^tXX^TXX^Tv} + \frac{\alpha}{2} \B{v^tXX^Tv} - \B{v^tXX^Ty} \\ 
+%	& - & \alpha \lambda \B{v^tXX^Tv_{prior}} + C \\
+%	& = & \frac{1}{2}\B{v^tKKv} + \frac{\alpha}{2} \B{v^tKv} - \B{v^tKy} - \alpha \lambda \B{v^tKv_{prior}} + C\\
+%	& = & \frac{1}{2} \B{\| \tilde{K}v - \tilde{y} \|_2^2} + C
+%\end{eqnarray*}
+%where
+%\begin{equation}
+%	\B{ \tilde{K} = \sqrt{K(K+\alpha I)}}
+%\end{equation}
+%and :
+%\begin{equation}
+%	\B{ \tilde{y} = \tilde{K}^{-1}(y+\alpha \lambda v_{prior}^t)}
+%\end{equation}
 
 \end{document}
