@@ -20,4 +20,13 @@ dataset = fetch_adni_fdg_pet_diff()
 idx = set_group_indices(dataset['dx_group'])
 pet_files = dataset['pet']
 
+mask = fetch_adni_masks()
+mask_img = nib.load(mask['mask_petmr'])
 
+
+"""
+spnc = SpaceNetClassifier(penalty='smooth-lasso', eps=1e-1,
+                          mask=mask_img, n_jobs=20, memory=CACHE_DIR)
+                          
+spnc.fit(X, y)
+"""
