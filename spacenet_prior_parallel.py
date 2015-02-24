@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 """
+Created on Tue Feb 24 09:33:58 2015
+
+@author: mehdi.rahim@cea.fr
+"""
+
+# -*- coding: utf-8 -*-
+"""
 Created on Mon Feb 23 09:21:51 2015
 
 @author: mehdi.rahim@cea.fr
@@ -14,9 +21,9 @@ import matplotlib.pyplot as plt
 
 from nilearn.decoding import SpaceNetClassifier
 from sklearn.cross_validation import StratifiedShuffleSplit
-from sklearn.metrics import accuracy_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.datasets.base import Bunch
+from scipy import sparse
 
 ### 2D array to 4D nifti
 def array_to_niis(data, mask_img):
@@ -27,36 +34,55 @@ def array_to_niis(data, mask_img):
 
 ### main loop
 # (train, test, g1_feat, g2_feat, mask_img)
-def train_and_test(train, test, g1_feat, g2_feat, mask_img, wprior, lambda_):
+def train_and_test(train, test, g1_feat, g2_feat,
+                   mask_img, w_pet, alpha_, lambda_):
     
     x_train_stacked = []
     x_test_stacked = []
     lgr_coeffs = []
     coeffs = []
-    for k in range(g1_feat.shape[2]):
+    for k in range(1):#g1_feat.shape[2]):
         x = np.concatenate((g1_feat[..., k], g2_feat[..., k]), axis=0)
         xtrain = x[train]
         y_train = y[train]
         xtest = x[test]
         y_test = y[test]
 
-        # without prior (spacenet + stacking)
-        spnc = SpaceNetClassifier(penalty='smooth-lasso', eps=1e-1,
-                                  mask=mask_img, n_jobs=20, memory=CACHE_DIR)
-                 
-        xtrain_img = array_to_niis(xtrain, mask_img)
-        xtest_img = array_to_niis(xtest, mask_img)
-        spnc.fit(xtrain_img, y_train)
-        x_train_stacked.append(spnc.predict(xtrain_img))
-        x_test_stacked.append(spnc.predict(xtest_img))
-        coeffs.append(spnc.all_coef_)
+        xtrain_tilde = sparse.vstack([sparse.csr_matrix(xtrain, dtype=np.float64),
+                                      np.sqrt(alpha_)*sparse.eye(w_pet.shape[1],
+                                      dtype=np.float64)])
+        
+        y_train_tilde = sparse.vstack([sparse.csr_matrix(np.tile(y_train,(1,1)).T),
+                                       sparse.csr_matrix(w_pet.T)])
 
+
+        xtest_tilde = sparse.vstack([sparse.csr_matrix(xtest, dtype=np.float64),
+                                      np.sqrt(alpha_)*sparse.eye(w_pet.shape[1],
+                                      dtype=np.float64)])
+        
+        y_test_tilde = sparse.vstack([sparse.csr_matrix(np.tile(y_test,(1,1)).T),
+                                       sparse.csr_matrix(w_pet.T)])
+
+
+        # spacenet
+        spnc = SpaceNetClassifier(penalty='smooth-lasso', eps=1e-1,
+                                  mask=mask_img, n_jobs=20, memory=CACHE_DIR,
+                                  screening_percentile=100)
+                 
+        #xtrain_img = array_to_niis(xtrain_tilde, mask_img)
+        #xtest_img = array_to_niis(xtest_tilde, mask_img)
+        spnc.fit(xtrain_tilde, y_train)
+        x_train_stacked.append(spnc.predict(xtrain_tilde))
+        x_test_stacked.append(spnc.predict(xtest_tilde))
+        coeffs.append(spnc.coef_)
+
+    # stacking
     x_train_ = np.asarray(x_train_stacked).T
     x_test_ = np.asarray(x_test_stacked).T
     lgr = LogisticRegression()
-    lgr.fit(x_train_, y_train)
+    lgr.fit(x_train_, y_train_tilde)
     lgr_coeffs = lgr.coef_
-    acc = lgr.score(x_test_,  y_test)
+    acc = lgr.score(x_test_,  y_test_tilde)
 
     return Bunch(accuracy=acc, coeffs=coeffs, lgr_coeffs=lgr_coeffs)
     
@@ -98,19 +124,20 @@ y[len(y) - len(g2_feat):] = 0
 
 
 ### prepare shuffle split
-n_iter = 5
+n_iter = 1
 sss = StratifiedShuffleSplit(y, n_iter=n_iter, test_size=.2,
                              random_state=np.random.seed(42))
+
+alpha_ = .1
+lambda_ = .7
 
 ### spacenet !
 p = []
 for train, test in sss:
-    p.append(train_and_test(train, test, g1_feat, g2_feat, mask_img, w_pet, .7))
-
+    p.append(train_and_test(train, test, g1_feat, g2_feat, mask_img, w_pet, alpha_, lambda_))
 
 """
 from joblib import Parallel, delayed
 p = Parallel(n_jobs=40, verbose=5)(delayed(train_and_test)\
 (train, test, g1_feat, g2_feat, mask_img, wprior, lambda_) for train, test in sss)
 """
-
