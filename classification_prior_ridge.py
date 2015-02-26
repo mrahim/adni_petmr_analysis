@@ -1,17 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Compute a ridge that combines PET model and fMRI correlations.
-The general formula is :
-|Xw - y|^2 + alpha |w - lambda w_tep|^2
-
-By making :
-beta = w - lambda w_tep
-
-We have :
-|X beta - (y - lambda X w_tep)|^2 + alpha |beta|^2
-
-
-Created on Wed Jan 21 09:05:28 2015
+Created on Thu Feb 26 14:05:20 2015
 
 @author: mehdi.rahim@cea.fr
 """
@@ -19,6 +8,7 @@ Created on Wed Jan 21 09:05:28 2015
 import os, time
 import numpy as np
 import matplotlib.pyplot as plt
+from priorclassifier import PriorClassifier
 from sklearn.linear_model import RidgeCV, LogisticRegression
 from sklearn.cross_validation import StratifiedShuffleSplit
 from sklearn.datasets.base import Bunch
@@ -27,7 +17,7 @@ from fetch_data import set_cache_base_dir, set_features_base_dir,\
                        set_group_indices
 
 
-def train_and_test(X, y, train, test):
+def train_and_test(X, y, train, test, w_pet, lambda_):
     
     x_train_stacked = []
     x_test_stacked = []
@@ -39,12 +29,15 @@ def train_and_test(X, y, train, test):
 
         rdg = RidgeCV(alphas=np.logspace(-3, 3, 7))
         rdg.fit(x_train, y_train)
-        x_train_stacked.append(rdg.predict(x_train))
-        x_test_stacked.append(rdg.predict(x_test))
+        pc = PriorClassifier(rdg, w_pet, lambda_)
+        pc.fit(x[:,...], y[:])
+
+        x_train_stacked.append(pc.predict(x_train))
+        x_test_stacked.append(pc.predict(x_test))
         coeffs.append(rdg.coef_)
 
-    x_train_ = np.asarray(x_train_stacked).T
-    x_test_ = np.asarray(x_test_stacked).T
+    x_train_ = np.asarray(x_train_stacked).T[0, ...]
+    x_test_ = np.asarray(x_test_stacked).T[0, ...]
     
     lgr = LogisticRegression()
     lgr.fit(x_train_, y_train)
@@ -55,9 +48,10 @@ def train_and_test(X, y, train, test):
     B = Bunch(score=scores, proba=probas, coeff=coeffs, coeff_lgr=coeff_lgr)
 
     ts = str(int(time.time()))
-    np.savez_compressed(os.path.join(CACHE_DIR, 'ridge_stacking_fmri_' + ts),
+    np.savez_compressed(os.path.join(CACHE_DIR, 'ridge_prior_' + ts),
                         data=B)
     return B
+
 
 ###########################################################################
 ###########################################################################
@@ -85,13 +79,20 @@ X = np.array(X)
 y = np.ones(X.shape[0])
 y[len(y) - len(idx_):] = 0
 
+
+### load PET a priori
+pet_model_path = os.path.join(FEAT_DIR, 'pet_models',
+                              'svm_coeffs_pet_diff.npz')
+model = np.load(pet_model_path)['svm_coeffs']
+w_pet = np.array(model)
+
 print 'Classification ...'
 n_iter = 100
 sss = StratifiedShuffleSplit(y, n_iter=n_iter, test_size=.2,
                              random_state=np.random.seed(42))
-    
-from joblib import Parallel, delayed
-p = Parallel(n_jobs=10, verbose=5)(delayed(train_and_test)(X, y, train, test)\
-                                    for train, test in sss)
 
-np.savez_compressed(os.path.join(CACHE_DIR, 'ridge_stacking_fmri_'+str(n_iter)),data=p)
+from joblib import Parallel, delayed
+p = Parallel(n_jobs=10, verbose=5)(delayed(train_and_test)(X, y, train, test,
+             w_pet, .7) for train, test in sss)
+
+np.savez_compressed(os.path.join(CACHE_DIR, 'ridge_prior_'+str(n_iter)),data=p)
