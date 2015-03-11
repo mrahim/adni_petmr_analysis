@@ -22,12 +22,12 @@ def train_and_test(X, y, mask, train, test, w_pet, alpha_, lambda_):
     x_train_stacked = []
     x_test_stacked = []
     coeffs = []
-    y_train, y_test = y[train], y[test]
+    y_train, y_test = y, y[test]
 
     for k in range(X.shape[2]):
         x = X[...,k]
-        x_train, x_test = x[train], x[test]
-        xtrain_img = array_to_niis(x_train, mask)
+        x_test = x[test]
+        xtrain_img = array_to_niis(x, mask)
         xtest_img = array_to_niis(x_test, mask)
         
         spnr = SpaceNetRegressor(penalty='smooth-lasso', w_prior=w_pet,
@@ -96,9 +96,9 @@ sss = StratifiedShuffleSplit(y, n_iter=n_iter, test_size=.2,
                              random_state=np.random.seed(42))
 
 from joblib import Parallel, delayed
-p = Parallel(n_jobs=20, verbose=1)(delayed(train_and_test)(X, y,
+p = Parallel(n_jobs=20, verbose=5)(delayed(train_and_test)(X, y,
              mask['mask_petmr'], train, test, w_pet, alpha_, lambda_)\
              for train, test in sss)
 
-np.savez_compressed(os.path.join(CACHE_DIR,
+np.savez_compressed(os.path.join(CACHE_DIR, 'spacenet',
                                  'spacenet_prior_'+str(n_iter)), data=p)

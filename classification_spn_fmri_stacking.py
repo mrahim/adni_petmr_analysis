@@ -28,8 +28,8 @@ def train_and_test(X, y, mask, train, test):
         x = X[...,k]
         x_train, x_test = x[train], x[test]
 
-        spn = SpaceNetRegressor(penalty='smooth-lasso', mask=mask,
-                                cv=2, max_iter=100)
+        spn = SpaceNetRegressor(penalty='tv-l1', mask=mask,
+                                cv=8, max_iter=400)
         
         x_train_img = array_to_niis(x_train, mask)
         spn.fit(x_train_img, y_train)
@@ -50,7 +50,7 @@ def train_and_test(X, y, mask, train, test):
     B = Bunch(score=scores, proba=probas, coeff=coeffs, coeff_lgr=coeff_lgr)
 
     ts = str(int(time.time()))
-    np.savez_compressed(os.path.join(CACHE_DIR, 'spacenet_stacking_fmri_' + ts),
+    np.savez_compressed(os.path.join(CACHE_DIR, 'spacenet_stacking_fmri_tv_' + ts),
                         data=B)
     return B
 
@@ -88,7 +88,7 @@ sss = StratifiedShuffleSplit(y, n_iter=n_iter, test_size=.2,
                              random_state=np.random.seed(42))
     
 from joblib import Parallel, delayed
-p = Parallel(n_jobs=10, verbose=5)(delayed(train_and_test)(X, y, mask['mask_petmr'], train, test)\
+p = Parallel(n_jobs=20, verbose=5)(delayed(train_and_test)(X, y, mask['mask_petmr'], train, test)\
                                     for train, test in sss)
 
-np.savez_compressed(os.path.join(CACHE_DIR, 'spacenet_stacking_fmri_'+str(n_iter)),data=p)
+np.savez_compressed(os.path.join(CACHE_DIR, 'spacenet_stacking_fmri_tv_'+str(n_iter)),data=p)

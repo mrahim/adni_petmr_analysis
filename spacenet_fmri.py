@@ -12,7 +12,7 @@ from fetch_data import fetch_adni_petmr, fetch_adni_masks,\
                        set_features_base_dir, set_cache_base_dir
 import matplotlib.pyplot as plt
 
-from nilearn.decoding import SpaceNetClassifier
+from nilearn.decoding import SpaceNetClassifier, SpaceNetRegressor
 from sklearn.cross_validation import StratifiedShuffleSplit
 from sklearn.metrics import accuracy_score
 
