@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Script that computes svm coeffs on PET voxels
+Script that computes ridge coeffs on PET voxels
 Created on Mon Jan 26 11:16:46 2015
 
 @author: mehdi.rahim@cea.fr
 """
 
-import os
 import numpy as np
 import nibabel as nib
 from sklearn.cross_validation import StratifiedShuffleSplit
@@ -17,17 +16,19 @@ from sklearn.datasets.base import Bunch
 from sklearn.linear_model import RidgeClassifierCV
 
 def train_and_test(X, y, train, test):
+    """Returns a bunch containing the score,
+    the proba and the coeff of the train and test iteration.
+    """
     x_train, y_train = X[train], y[train]
     x_test, y_test = X[test], y[test]
 
-    rdgc = RidgeClassifierCV(alphas=np.logspace(-3,3,7))
+    rdgc = RidgeClassifierCV(alphas=np.logspace(-3, 3, 7))
     rdgc.fit(x_train, y_train)
     proba = rdgc.decision_function(x_test)
     score = rdgc.score(x_test, y_test)
     coeff = rdgc.coef_
     return Bunch(score=score, proba=proba, coeff=coeff)
-    
-    
+
 #################################################
 CACHE_DIR = set_cache_base_dir()
 
@@ -36,12 +37,12 @@ mask = fetch_adni_masks()
 dataset = fetch_adni_fdg_pet()
 pet_files = np.array(dataset['pet'])
 idx = set_group_indices(dataset['dx_group'])
-idx_ = np.hstack((idx['Normal'][0]))
-img_idx = np.hstack((idx['AD'][0], idx_))
+idx_ = np.hstack((idx['Normal']))
+img_idx = np.hstack((idx['AD'], idx_))
 
 ### Mask data
 mask_img = nib.load(mask['mask_petmr'])
-X = apply_mask(pet_files[img_idx], mask_img)   
+X = apply_mask(pet_files[img_idx], mask_img)
 y = np.ones(X.shape[0])
 y[len(y) - len(idx_):] = 0
 
@@ -54,4 +55,3 @@ p = Parallel(n_jobs=20, verbose=5)(delayed(train_and_test)\
 (X, y, train, test) for train, test in sss)
 
 np.savez_compressed('ridge_classif_pet_'+str(n_iter), data=p)
-    
