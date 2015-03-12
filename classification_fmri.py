@@ -13,32 +13,6 @@ from fetch_data import set_cache_base_dir, fetch_adni_petmr
 from fetch_data import set_features_base_dir
 import matplotlib.pyplot as plt
 
-def plot_shufflesplit(score, groups, title, filename):
-    bp = plt.boxplot(score, 0, '', 0)
-    for key in bp.keys():
-        for box in bp[key]:
-            box.set(linewidth=2)
-    plt.grid(axis='x')
-    plt.xlim([.4, 1.])
-    plt.xlabel('Accuracy (%)', fontsize=18)
-    if len(title)==0:
-        title = 'Shuffle Split Accuracies '
-    plt.title(title, fontsize=17)
-    ylabels = []
-    for g in groups:
-        ylabels.append('/'.join(g))
-    plt.yticks(range(1,7), ylabels, fontsize=16)
-    plt.xticks(np.linspace(0.4,1.0,7), np.arange(40,110,10), fontsize=18)
-    plt.tight_layout()
-    if len(filename)==0:
-        filename = 'boxplot_adni_baseline_petmr'
-    for ext in ['png', 'pdf', 'svg']:
-        fname = '.'.join([filename,
-                          ext])
-        plt.savefig(os.path.join(FIG_PATH, fname), transparent=False)
-
-
-
 FEAT_DIR = set_features_base_dir()
 FMRI_DIR = os.path.join(FEAT_DIR, 'smooth_preproc', 'fmri_subjects')
 CACHE_DIR = set_cache_base_dir()
