@@ -38,12 +38,9 @@ def train_and_test(X, y, train, test):
     x_train_ = np.asarray(x_train_stacked).T
     x_test_ = np.asarray(x_test_stacked).T
 
-    x_kbest_ = SelectKBest(f_classif, 10).fit_transform(\
-                           np.concatenate((x_train_, x_test_)),
-                           np.concatenate((y_train, y_test)))
-    x_kbest_train_ = x_kbest_[:len(y_train), ...]
-    x_kbest_test_ = x_kbest_[len(y_train):, ...]
-
+    skb = SelectKBest(f_classif, 10)
+    x_kbest_train_ = skb.fit(x_train_, y_train)
+    x_kbest_test_ = skb.transform(x_test_)
 
     lgr = LogisticRegression()
     lgr.fit(x_train_, y_train)
@@ -92,11 +89,10 @@ n_iter = 100
 sss = StratifiedShuffleSplit(y, n_iter, test_size=.2,
                              random_state=np.random.seed(42))
 
-
 print 'classification'
 
 from joblib import Parallel, delayed
-p = Parallel(n_jobs=20, verbose=5)\
+p = Parallel(n_jobs=-1, verbose=5)\
             (delayed(train_and_test)(X, y, train, test)\
             for train, test in sss)
 
