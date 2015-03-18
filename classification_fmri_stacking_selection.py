@@ -48,7 +48,8 @@ def train_and_test(X, y, train, test):
     scores_kbest = []
     for kb in np.arange(5, 30, 5):
         skb = SelectKBest(f_classif, kb)
-        x_kbest_train_ = skb.fit(x_train_, y_train)
+        skb.fit(x_train_, y_train)
+        x_kbest_train_ = skb.transform(x_train_)
         x_kbest_test_ = skb.transform(x_test_)
     
         lgr_kbest = LogisticRegression()
