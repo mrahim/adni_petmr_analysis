@@ -38,28 +38,35 @@ def train_and_test(X, y, train, test):
     x_train_ = np.asarray(x_train_stacked).T
     x_test_ = np.asarray(x_test_stacked).T
 
-    skb = SelectKBest(f_classif, 10)
-    x_kbest_train_ = skb.fit(x_train_, y_train)
-    x_kbest_test_ = skb.transform(x_test_)
-
     lgr = LogisticRegression()
     lgr.fit(x_train_, y_train)
-    probas = lgr.decision_function(x_test_)
+    #probas = lgr.decision_function(x_test_)
     scores = lgr.score(x_test_, y_test)
-    coeff_lgr = lgr.coef_
+    #coeff_lgr = lgr.coef_
 
-    lgr_kbest = LogisticRegression()
-    lgr_kbest.fit(x_kbest_train_, y_train)
-    probas_kbest = lgr_kbest.decision_function(x_kbest_test_)
-    scores_kbest = lgr_kbest.score(x_kbest_test_, y_test)
-    coeff_lgr_kbest = lgr_kbest.coef_
 
-    print 'score: %.2f, k_best: %.2f' % (scores, scores_kbest)
-    B = Bunch(score=scores, proba=probas, coeff=coeffs, coeff_lgr=coeff_lgr,
-              score_kbest=scores_kbest, proba_kbest=probas_kbest,
-              coeff_lgr_kbest=coeff_lgr_kbest,
-              xpred=np.concatenate((x_train_, x_test_)),
-              ypred=np.concatenate((y_train, y_test))
+    scores_kbest = []
+    for kb in np.arange(5, 30, 5):
+        skb = SelectKBest(f_classif, kb)
+        x_kbest_train_ = skb.fit(x_train_, y_train)
+        x_kbest_test_ = skb.transform(x_test_)
+    
+        lgr_kbest = LogisticRegression()
+        lgr_kbest.fit(x_kbest_train_, y_train)
+        #probas_kbest = lgr_kbest.decision_function(x_kbest_test_)
+        scores_kbest.append(lgr_kbest.score(x_kbest_test_, y_test))
+        #coeff_lgr_kbest = lgr_kbest.coef_
+
+    print 'score: %.2f, k_best: %.2f' % (scores, scores_kbest)    
+    B = Bunch(score=scores,
+              #proba=probas,
+              #coeff=coeffs,
+              #coeff_lgr=coeff_lgr,
+              #proba_kbest=probas_kbest,
+              #coeff_lgr_kbest=coeff_lgr_kbest,
+              #xpred=np.concatenate((x_train_, x_test_)),
+              #ypred=np.concatenate((y_train, y_test)),
+              score_kbest=scores_kbest
               )
 
     return B
